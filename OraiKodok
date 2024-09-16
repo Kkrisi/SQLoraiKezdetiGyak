@@ -59,3 +59,25 @@ drop column szak
 
 alter table Orvos
 add foreign key (szakk) references szak (szak)
+
+
+create table beteg
+(
+tajszám char(9),
+név varchar(30),
+szül_dátum date,
+lakhely varchar(60),
+primary key(tajszám)
+)
+
+create table vény
+(
+azonosító int,
+felírás_kelt date,
+beváltás_kelt date,
+orvos int,
+tajszám char(9),
+primary key (azonosító),
+foreign key (orvos) references orvos(kód),
+foreign key (tajszám) references beteg(tajszám)
+)
