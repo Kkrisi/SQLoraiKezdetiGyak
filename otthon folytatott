@@ -1,0 +1,223 @@
+--normalizálás
+--szerk. bőv, Patika fh. funkcióra
+
+--create database patika
+
+use patika
+
+create table Orvos
+(
+kód int,
+nev varchar(30) not null,
+szak char(40) not null,
+primary key(kód)
+)
+
+insert into Orvos values(12345, 'dr Méz', 'gyerekorvos')
+select * from Orvos
+
+insert into Orvos values(54321, 'dr Méz', 'gyerekorvos')
+insert into Orvos values(55555, 'dr Ő', 'szülész-nőgyógyász')
+
+
+--fa: a SZK legyen szótárazott... az adatok el ne vesszenek!
+
+
+create table Szak
+(
+szak int identity(11,1), --autoincrement
+megnevezes char(40),
+primary key (szak) 
+)
+
+
+insert into Szak
+select distinct Szak
+from Orvos
+
+
+create unique index neves1 on Szak (megnevezes)
+insert into Szak values ('onkologus')
+
+select * from Szak
+select * from Orvos
+
+alter table Orvos
+add szaKK int
+
+select *
+from Orvos
+    inner join szak on orvos.szak = szak.megnevezes
+
+update Orvos
+set szakk = (select szak from szak where szak.megnevezes = Orvos.szak)
+
+
+alter table Orvos
+drop column szak
+
+
+alter table Orvos
+add foreign key (szakk) references szak (szak)
+
+
+create table beteg
+(
+tajszám char(9),
+név varchar(30),
+szül_dátum date,
+lakhely varchar(60),
+primary key(tajszám)
+)
+
+create table vény
+(
+azonosító int,
+felírás_kelt date,
+beváltás_kelt date,
+orvos int,
+tajszám char(9),
+primary key (azonosító),
+foreign key (orvos) references orvos(kód),
+foreign key (tajszám) references beteg(tajszám)
+)
+
+
+
+
+
+
+
+
+
+
+
+
+--otthon csinált:
+
+
+
+
+-- vény, beteg, orvos, szak. gyogyszer, hatoanyag, tunet, hatas, termek, arvalt, kiszereles, keszlet,forgalom, ny_tetel
+use patika
+
+create table fajta (
+	fajta varchar(20),
+	leiras text,
+	primary key(fajta)
+)
+
+create table gyógyszer
+(
+    gyszam int,
+    elnevezes varchar(30),
+    fajta varchar(20),
+    hatoanyag char(12),
+	venyes_e bit,
+    primary key (gyszam),
+	FOREIGN KEY (fajta) REFERENCES FAJTA(fajta),
+    FOREIGN KEY (hatoanyag) REFERENCES hatóanyag(h_azon)
+)
+
+EXEC sp_rename 'hatoanyag', 'hatóanyag'; --átnevezés
+EXEC sp_rename 'gyogyszer', 'gyógyszer';
+
+create table hatóanyag (
+    h_azon char(12),
+    elnevezes varchar(30)
+	primary key(h_azon)
+)
+
+create table tünet (
+	t_azon int,
+	elnevezes varchar(15)
+	primary key (t_azon)
+)
+
+EXEC sp_rename 'tunet', 'tünet';
+
+create table hatas (
+	gyogyszer int,
+	tunet int,
+	hatas varchar(30)
+	primary key(gyogyszer, tunet),
+	FOREIGN KEY (gyogyszer) REFERENCES gyógyszer(gyszam),
+    FOREIGN KEY (tunet) REFERENCES tünet(t_azon)
+)
+
+EXEC sp_rename 'kiszereles', 'kiszerelés';
+
+create table termék (
+	tkod int,
+	gyogyszer int,
+	kiszereles int,
+	ear1 money,
+	ear2 money,
+	ear3 money,
+	keszlet int,
+	primary key(tkod),
+	FOREIGN KEY (gyogyszer) REFERENCES gyógyszer(gyszam),
+    FOREIGN KEY (kiszereles) REFERENCES kiszerelés(k_azon)
+)
+
+EXEC sp_rename 'termek', 'termék';
+
+create table arvalt (
+	termek int,
+	meddig date,
+	regi_ar1 money,
+	regi_ar2 money,
+	regi_ar3 money,
+	primary key(termek, meddig),
+	FOREIGN KEY (termek) REFERENCES termék(tkod)
+)
+
+create table kiszerelés (
+	k_azon int,
+	tartalom varchar(30),
+	mennyiseg int,
+	mertekegyseg char(3)
+	primary key(k_azon)
+)
+
+EXEC sp_rename 'keszlet', 'készlet';
+
+create table készlet (
+	termek int,
+	lejarat date,
+	keszlet int,
+	primary key(termek),
+	FOREIGN KEY (termek) REFERENCES termék(tkod)
+)
+
+
+create table forgalom (
+	forg_id int,
+	termek int,
+	lejarat date,
+	mikor date,
+	mennyi int,
+	mozgasnem bit,
+	primary key(forg_id),
+	FOREIGN KEY (termek) REFERENCES termék(tkod)
+)
+
+create table nyugta (
+	nyszam int,
+	datum date,
+	vegosszeg int,
+	primary key(nyszam)
+)
+
+
+create table ny_tetel (
+	nyugta int,
+	sorszam int,
+	termek int,
+	mennyi int,
+	veny int,
+	primary key(nyugta,sorszam),
+	FOREIGN KEY (nyugta) REFERENCES nyugta(nyszam),
+    FOREIGN KEY (termek) REFERENCES termék(tkod),
+    FOREIGN KEY (veny) REFERENCES vény(azonosító)
+)
