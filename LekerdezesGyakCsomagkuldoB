@@ -1,0 +1,73 @@
+
+select * from cikk
+select * from vevő
+select * from csomag
+select * from rendelés
+select * from rend_tétel
+
+-- össz. megszorítások, adatra vonatk. korlátozások
+
+-- pl-ként egy rossz ügyvitelhez tartozó megszorítás
+-- az új rend_tétel sor mennyisége <= cikszámhoz tartozó akt_készlet (a Cikkben)
+go
+--kell 1 skalárt vissza-adó függvényt írni:
+go
+
+create function készlet
+(
+@Cikk char(10)
+)
+returns smallint
+as
+begin
+	return
+	(
+	select akt_készlet from cikk where cikkszám=@cikk
+	)
+end
+
+--select dbo.készlet('c0003')
+
+go
+
+
+alter table rend_tétel with nocheck
+add check (menny<=dbo.készlet(cikkszám))
+
+-- a megírt függvények felhasznál.hatók bárhol
+
+go
+
+create view nézet1 as
+select *, dbo.készlet(cikkszám) as pill_készlete
+from rend_tétel
+
+
+--select * from nézet1
+
+-- XOR nem kell máshova ilyen fgv, ezért a fgv-ben döntünk, hogy az érték jó-e
+
+go
+
+create function jó_készlet
+(
+@Cikk char(10),
+@menny smallint
+)
+returns bit
+as
+begin
+	declare @vi bit
+	set @vi=1
+	IF @menny >(select akt_készlet from cikk where cikkszám=@cikk)
+		set @vi=0
+	return @vi
+end
+
+--select dbo.készlet('c0002',10)
+
+go
+
+--ezzel a fgv-nyel a megszorítás:
+alter table rend_tétel with nocheck
+add check (dbo.jó_készlet(cikkszám, menny)=1)
