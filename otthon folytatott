@@ -101,11 +101,16 @@ foreign key (tajszám) references beteg(tajszám)
 -- vény, beteg, orvos, szak. gyogyszer, hatoanyag, tunet, hatas, termek, arvalt, kiszereles, keszlet,forgalom, ny_tetel
 use patika
 
-create table fajta (
-	fajta varchar(20),
-	leiras text,
+
+create table FAJTA (
+	fajta int identity (101,1),
+	leiras varchar(30),
 	primary key(fajta)
 )
+
+create unique index fajta_egyedi --a unique nem engedi mégegyszer felengedni pl hogy "lázcsillapito"
+on fajta (leiras)
+
 
 create table gyógyszer
 (
