@@ -1,0 +1,461 @@
+
+
+
+
+
+-- Az egyes tárgyakból mikor van a heti legelső óra?
+
+select tant, nap, óra
+from órarend k
+where 10*nap+óra = (select MIN(10*nap+óra) from órarend where tant=k.tant)
+
+
+
+
+-- A napi legutolsó tanórák...
+
+select nap, max(óra) -- mikor vannak?
+from órarend
+group by nap
+
+select nap, tant, osztály -- mik azok?
+from órarend K
+where óra=(select max(óra) from órarend where nap=K.nap)
+
+
+
+
+-- Tanári ütközések
+
+SELECT kód as tanár, nap, óra, count(*) AS hány_osztályt
+FROM órarend AS r, tanít AS t
+WHERE r.osztály=t.osztály and r.tant=t.tant
+GROUP BY kód, nap, óra
+HAVING count(*)>1;
+
+
+
+
+
+
+
+
+-1.	Hány munka készült Pécsre?
+SELECT COUNT(*) AS HÁNY
+FROM MUNKA
+WHERE MEGRENDELŐ IN (SELECT AZON FROM megrendelő WHERE HELYSÉG Like '%Pécs%');
+--vagy
+SELECT COUNT(*) AS HÁNY
+FROM megrendelő, MUNKA
+WHERE MEGRENDELŐ=AZON And HELYSÉG Like '%Pécs%';
+
+
+
+--2.	Ma kiknek jár le a határidejük?
+SELECT  VEZETŐ AS KÓD
+FROM MUNKA
+WHERE HATÁRIDŐ=getdate()
+UNION 
+SELECT KÓD
+FROM MUNKA, CSOPORT
+WHERE MUNKA.M_SZÁM=CSOPORT.M_SZÁM And HATÁRIDŐ=getdate();
+
+
+
+--3.	Nagy Pál milyen munkákban vett részt az elmúlt évben?
+SELECT M.M_SZÁM
+FROM CSOPORT C, DOLGOZÓ D, MUNKA M
+WHERE C.KÓD=D.KÓD And C.M_SZÁM=M.M_SZÁM And NEVE='Nagy Pál' And YEAR(IND_KELT)=YEAR(GETDATE())-1;
+
+
+
+--4.	Az egyes munkák hány napig tartanak?
+SELECT M_SZÁM, datediff(day, IND_KELT, HATÁRIDŐ) AS NAPOS
+FROM MUNKA;
+
+
+
+--5.	Naponta hány munka indult el eddig?
+SELECT IND_KELT, COUNT(*) as ennyi
+FROM MUNKA
+WHERE ind_kelt<getdate()
+GROUP BY IND_KELT;
+
+
+
+--6.	Csoportlétszámok
+SELECT M_SZÁM, COUNT(KÓD) AS LÉTSZÁM
+FROM CSOPORT
+GROUP BY M_SZÁM;
+
+
+
+--7.	Az egyes csoportok átlagéletkora?
+SELECT M_SZÁM, AVG(YEAR(getdate())-SZÜL_ÉVE) AS ÁTLAGKOR
+FROM DOLGOZÓ D, CSOPORT C
+WHERE D.KÓD=C.KÓD
+GROUP BY M_SZÁM;
+
+
+
+-- 8.	Árbevételek megrendelőnként?
+SELECT MEGRENDELŐ, SUM(ÓRADÍJ*ÓRASZÁM) as árbev
+FROM MUNKA
+GROUP BY MEGRENDELŐ;
+
+
+
+--9.	Munkaórák összege vezetőnként?
+SELECT VEZETŐ, SUM(ÓRASZÁM) as összóra
+FROM MUNKA
+GROUP BY VEZETŐ;
+
+
+
+--10.	A legnagyobb óraszámú munka?
+SELECT *
+FROM MUNKA
+WHERE ÓRASZÁM = (SELECT MAX(ÓRASZÁM) FROM MUNKA);
+-- vagy a megfelelő rendezést követő holtverseny kezelésével
+SELECT top 1 with ties *
+FROM MUNKA
+order by ÓRASZÁM desc;
+
+
+
+--11.	A legrövidebb határidejű munka?
+SELECT *, datediff(day, IND_KELT, HATÁRIDŐ) AS NAPOS
+FROM MUNKA
+WHERE datediff(day, IND_KELT, HATÁRIDŐ)=(SELECT MIN(datediff(day, IND_KELT, HATÁRIDŐ)) FROM MUNKA);
+
+
+
+
+--12.	Kik dolgoztak a legnagyobb óradíjas munkán?
+SELECT DISTINCT KÓD
+FROM MUNKA M, CSOPORT C
+WHERE M.M_SZÁM=C.M_SZÁM 
+AND
+ÓRADÍJ=(SELECT  MAX(ÓRADÍJ)  FROM MUNKA);
+
+
+
+--13.	Hova készült a legkisebb óradíjas munka?
+SELECT ir_szám, helység, utca_hsz
+FROM MEGRENDELŐ, MUNKA
+WHERE MEGRENDELŐ=AZON
+AND ÓRADÍJ = (SELECT MIN(ÓRADÍJ) FROM MUNKA);
+-- vagy
+SELECT *
+FROM MEGRENDELŐ
+WHERE AZON IN (SELECT MEGRENDELŐ FROM MUNKA WHERE  ÓRADÍJ = (SELECT MIN(ÓRADÍJ) FROM MUNKA));
+
+
+
+--14.	Ki nem volt még soha vezető?
+SELECT *
+FROM DOLGOZÓ
+WHERE KÓD not IN (SELECT VEZETŐ FROM MUNKA);
+
+
+
+--15.	Ki dolgozott eddig csak vezetőként?
+SELECT *
+FROM DOLGOZÓ
+WHERE KÓD  in (SELECT VEZETŐ FROM MUNKA)
+AND KÓD NOT IN (SELECT KÓD FROM CSOPORT);
+
+
+
+
+
+-- 25.	Ki kivel dolgozott már egy csoportban?
+SELECT E.KÓD, M.KÓD
+FROM CSOPORT E, CSOPORT M
+WHERE E.KÓD > M.KÓD AND E.M_SZÁM = M.M_SZÁM;
+
+
+
+
+
+-- Jelenjen meg az autók minden adata (a párhuzamos kapcsolatok alapján elérve a szem. adatokat)
+
+select autó.*, tulajdonos.*, uzemelteto.*
+from autó 
+	inner join személy Tulajdonos on tulaj=tulajdonos.kód 
+	inner join személy Uzemelteto on üzem=uzemelteto.kód
+
+
+--Hány darab legfeljebb 3 éves autó van az egyes márkákból?
+
+SELECT márka, count(rend_szám) AS számláló
+FROM autó
+WHERE year(getdate())-évjárat <= 3
+GROUP BY márka;
+
+
+
+--Név szerint ki a tulajdonosa a legöregebb BMW autónak?
+
+SELECT név
+FROM AUTÓ, SZEMÉLY
+WHERE tulaj=kód
+and márka='BMW' and évjárat=(select min(évjárat) from autó where márka='BMW');
+
+-- vagy 
+
+SELECT név
+FROM AUTÓ inner join SZEMÉLY on tulaj=kód
+and márka='BMW' and évjárat=(select min(évjárat) from autó where márka='BMW');
+
+
+
+--Ki nem üzemeltet egy autót sem?
+
+SELECT *
+FROM személy
+WHERE kód not in (select üzem from autó);
+
+-- vagy
+
+SELECT kód FROM személy
+except 
+select üzem from autó;
+
+
+
+--Mennyi a budapesti tulajdonban lévő autók évjáratának alsó-felső határa?
+
+SELECT min(évjárat) AS alsó, max(évjárat) AS felső
+FROM autó INNER JOIN személy ON tulaj=kód 
+WHERE helység='Budapest';
+
+
+
+--Ki üzemelteti a legtöbb autót?
+
+SELECT top 1 with ties üzem, count(*) AS hány
+FROM autó
+GROUP BY üzem
+order by 2 desc
+
+-- esetleg:
+
+SELECT üzem, count(*) AS hány
+FROM autó
+GROUP BY üzem
+HAVING count(*)=(select max(B.hány) from (SELECT count(*) AS hány FROM autó GROUP BY üzem) B)
+
+
+
+-- Kik azok a tulajdonosok, akik kizárólag a saját autójukat üzemeltetik?
+
+SELECT *
+FROM személy
+WHERE kód IN  (select tulaj from autó where tulaj=üzem)
+and kód not in (SELECT üzem from autó where tulaj<>üzem);
+
+-- vagy 
+
+select tulaj from autó 
+where tulaj=üzem and tulaj not in (SELECT üzem from autó where tulaj<>üzem);
+
+-- vagy
+
+select tulaj from autó where tulaj=üzem
+except
+SELECT üzem from autó where tulaj<>üzem;
+
+
+
+-- Hány nap alatt teljesítették az egyes rendeléseket? 
+
+select r. rend_szám, datediff(day, kelt, feladva) as nap_múlva
+-- select feladva-kelt
+from rendelés r inner join csomag cs on r.csomag=cs.csomag
+-- a csomag törzzsel való belső ökapcsoláskor eltűnnek az árva gyerek-sorok (itt rendelés-sorok)
+
+
+
+
+
+--Hány osztály van az iskolában?
+
+select count(distinct osztaly) from tanulo
+-- vagy
+select count(*) from (select distinct osztaly from tanulo) s
+
+
+
+--Hány kör van típusonként?
+select left(kor,2) as tipus, count(*) as hány
+from kor 
+group by left(kor,2)
+
+
+
+--Osztályonként hányan járnak legalább 1 körre?
+select osztaly, count(distinct g.azon) as ennyien
+from tagsag G inner join tanulo T on g.azon=t.azon
+group by osztaly
+
+
+
+--Mely évfolyamon van legfeljebb 30 tanuló?
+select left(osztaly,1) as évf, count(*) as létszám
+from tanulo
+group by left(osztaly,1)
+
+
+
+--Jelenjen meg az elsősök osztálynévsora!
+select osztaly, nev, azon
+from tanulo 
+where osztaly like '1_' -- vagy where left(osztaly,1)='1'
+order by 1,2,3
+
+
+
+--Jelenjenek meg a nyelvkörök tagságának osztálynévsorai!
+select kor, osztaly, nev 
+from tagsag g
+	inner join tanulo t on g.azon=t.azon 
+where osztaly like '1_' and kor like 'NY%'
+order by 1,2,3
+
+
+
+--Kik kapták meg a segélyt abban a hónapban, amikorra utalták?
+select *
+from segely
+where month(kifiz) = honap -- évre itt nem kell szűrni, mert egy tanév adatai volnának benne
+
+
+
+--Kik és mikor kaptak segélyt az jelenlegi átlag feletti összegben?
+select *
+from segely
+where osszeg > (select avg(osszeg) from segely)
+
+
+--Kik és mikor kaptak segélyt az akkori átlag feletti összegben?
+select *
+from segely K
+where osszeg > (select avg(osszeg) from segely where kifiz<=K.kifiz)
+
+
+
+--Mekkora összegben fizettek ki segélyt ebben a hónapban az 1A osztályos tanulóknak?
+select sum(osszeg) as összesen
+from segely s inner join tanulo t on s.azon=t.azon 
+where osztaly = '1A' and year(kifiz)=year(getdate()) and month(kifiz)=month(getdate())
+
+
+
+--Mely jogcímen nem fizettek segélyt tavaly? 
+select * from jogcim
+where jogc NOT IN
+(select jogc from segely where year(kifiz)=year(getdate())-1)
+
+
+
+--Ki jár többféle sportkörre?
+select azon --, count(*) as hány
+from tagsag
+where kor like 'SP%'
+group by azon
+having count(*)>1
+
+
+
+--Mely körnek van a legkevesebb tagja?
+-- pontosítás: a körnek van tagja!
+-- a) verzió 2 lépésben
+create view tagletszam as
+select kor, count(*) as ennyien
+from tagsag
+group by kor
+
+
+
+
+--Melyik hónapra ki kapta a legnagyobb összeget?
+
+-- azaz minden hónapra jelenjen meg a legtöbbet kapó: 
+select honap, s.azon 
+from segely s inner join tanulo t on s.azon=t.azon 
+where osszeg=(select max(osszeg) from segely where honap=s.honap)
+
+
+
+-- nem ez: melyik hónapra fizették ki és kinek a legnagyobb összeget?
+select honap, s.azon 
+from segely s inner join tanulo t on s.azon=t.azon 
+where osszeg=(select max(osszeg) from segely)
+
+
+--Ki kapott segélyt több mint egyszer?
+
+select azon, count(*)
+from segely
+group by azon
+having count(*)>1
+
+
+
+--Ki kapott segélyt eddig a legtöbbször?
+
+select top 1 with ties azon, count(*)
+from segely
+group by azon
+order by 2 desc
+
+
+--Ki kapott segélyt mindig, amikor volt kifizetés?
+select azon, count(*)
+from segely
+group by azon
+having count(*)=(select count(distinct honap) from segely)
+
+
+
+--Mekkora az osztályoknak összesen kifizetett segélyek átlaga?
+select avg(B.osszesen) as átlag
+from (
+select osztaly, sum(osszeg) as osszesen
+from segely s inner join tanulo t on s.azon=t.azon
+group by osztaly
+) B
+
+
+
+--Név szerint kik járnak sportkörre és nyelvkörre, de szakkörre nem?
+-- klasszikusan:
+select azon from tanulo
+where azon in (select azon from tagsag where kor like 'SP%') 
+and azon in (select azon from tagsag where kor like 'NY%')
+and azon not in (select azon from tagsag where kor like 'SZ%')
+
+
+
+
+--Melyik körnek ki a tagja a legtöbb éve?
+select kor, azon
+from tagsag K
+where hany_eve = (select max(hany_eve) from tagsag B where B.kor=K.kor)
+
+
+
+
+--Minden osztályra jelenjen meg, hány tanuló jár sportkörre!  
+
+select osztaly, count(distinct g.azon)
+from tagsag g right outer join tanulo t on g.azon=t.azon AND kor like 'SP%'
+--where kor like 'SP%' -- itt nem helyes szűrni, ha látni akrjuk a 0 taglétszámú osztályokat is
+group by osztaly
+
+
+
+
+
+
