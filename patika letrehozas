@@ -1,0 +1,223 @@
+-- Use the correct database
+--use patika;
+create database patika
+
+-- Create table Orvos
+create table Orvos
+(
+    kód int primary key, -- Primary key defined directly here
+    nev varchar(30) not null,
+    szak char(40) not null -- Should be varchar for variable-length fields
+);
+
+-- Insert data into Orvos
+insert into Orvos values (12345, 'dr Méz', 'gyerekorvos');
+insert into Orvos values (54321, 'dr Méz', 'gyerekorvos');
+insert into Orvos values (55555, 'dr Ő', 'szülész-nőgyógyász');
+
+-- Create table Szak
+create table Szak
+(
+    szak int identity(11,1) primary key, -- Identity column for autoincrement
+    megnevezes varchar(40) not null
+);
+
+-- Insert distinct specialties from Orvos to Szak
+insert into Szak (megnevezes)
+select distinct szak from Orvos;
+
+-- Create unique index on megnevezes column
+create unique index neves1 on Szak (megnevezes);
+
+-- Insert new specialty into Szak
+insert into Szak (megnevezes) values ('onkologus');
+
+-- Add column szakk to Orvos table
+alter table Orvos
+add szakk int;
+
+-- Update szakk column based on the specialty name
+update Orvos
+set szakk = (select szak from Szak where Szak.megnevezes = Orvos.szak);
+
+-- Remove old szak column from Orvos
+alter table Orvos
+drop column szak;
+
+-- Add foreign key constraint to szakk in Orvos table
+alter table Orvos
+add foreign key (szakk) references Szak (szak);
+
+-- Create table Beteg
+create table beteg
+(
+    tajszám char(9) primary key, -- Primary key on tajszám
+    név varchar(30),
+    szül_dátum date,
+    lakhely varchar(60)
+);
+
+-- Create table Vény
+create table vény
+(
+    azonosító int primary key, -- Primary key on azonosító
+    felírás_kelt date,
+    beváltás_kelt date,
+    orvos int,
+    tajszám char(9),
+    foreign key (orvos) references Orvos(kód), -- Foreign key referencing Orvos
+    foreign key (tajszám) references beteg(tajszám) -- Foreign key referencing Beteg
+);
+
+
+
+-- Creating table Fajta
+create table fajta (
+    fajta varchar(20) primary key, -- Primary key on fajta
+    leiras text
+);
+
+
+
+
+-- Create table Hatóanyag
+create table hatóanyag (
+    h_azon char(12) primary key, -- Primary key on h_azon
+    elnevezes varchar(30)
+);
+
+
+
+-- Creating table Gyógyszer
+create table gyógyszer
+(
+    gyszam int primary key, -- Primary key on gyszam
+    elnevezes varchar(30),
+    fajta varchar(20),
+    hatoanyag char(12),
+    venyes_e bit,
+    foreign key (fajta) references fajta(fajta), -- Foreign key on fajta
+    foreign key (hatoanyag) references hatóanyag(h_azon) -- Foreign key on hatoanyag
+);
+
+
+
+
+-- Create table Tünet
+create table tünet (
+    t_azon int primary key, -- Primary key on t_azon
+    elnevezes varchar(15)
+);
+
+
+
+-- Create table Hatas
+create table hatas (
+    gyogyszer int,
+    tunet int,
+    hatas varchar(30),
+    primary key (gyogyszer, tunet), -- Composite primary key
+    foreign key (gyogyszer) references gyógyszer(gyszam), -- Foreign key on gyógyszer
+    foreign key (tunet) references tünet(t_azon) -- Foreign key on tünet
+);
+
+
+
+
+-- Create table Kiszerelés
+create table kiszerelés (
+    k_azon int primary key, -- Primary key on k_azon
+    tartalom varchar(30),
+    mennyiseg int,
+    mertekegyseg char(3)
+);
+
+
+
+-- Create table Termék
+create table termék (
+    tkod int primary key, -- Primary key on tkod
+    gyogyszer int,
+    kiszereles int,
+    ear1 money,
+    ear2 money,
+    ear3 money,
+    keszlet int,
+    foreign key (gyogyszer) references gyógyszer(gyszam), -- Foreign key on gyógyszer
+    foreign key (kiszereles) references kiszerelés(k_azon) -- Foreign key on kiszerelés
+);
+
+
+
+-- Create table Arvalt (Price change history)
+create table arvalt (
+    termek int,
+    meddig date,
+    regi_ar1 money,
+    regi_ar2 money,
+    regi_ar3 money,
+    primary key (termek, meddig), -- Composite primary key on termek and meddig
+    foreign key (termek) references termék(tkod) -- Foreign key on termék
+);
+
+
+
+
+-- Create table Készlet
+create table készlet (
+    termek int,
+    lejarat date,
+    keszlet int,
+    primary key (termek), -- Primary key on termek
+    foreign key (termek) references termék(tkod) -- Foreign key on termék
+);
+
+-- Create table Forgalom (Transaction)
+create table forgalom (
+    forg_id int primary key, -- Primary key on forg_id
+    termek int,
+    lejarat date,
+    mikor date,
+    mennyi int,
+    mozgasnem bit,
+    foreign key (termek) references termék(tkod) -- Foreign key on termék
+);
+
+-- Create table Nyugta (Receipt)
+create table nyugta (
+    nyszam int primary key, -- Primary key on nyszam
+    datum date,
+    vegosszeg int
+);
+
+-- Create table Ny_tetel (Receipt item)
+create table ny_tetel (
+    nyugta int,
+    sorszam int,
+    termek int,
+    mennyi int,
+    veny int,
+    primary key (nyugta, sorszam), -- Composite primary key on nyugta and sorszam
+    foreign key (nyugta) references nyugta(nyszam), -- Foreign key on nyugta
+    foreign key (termek) references termék(tkod), -- Foreign key on termék
+    foreign key (veny) references vény(azonosító) -- Foreign key on vény
+);
+
+
+
+
+
+
+SELECT * FROM Orvos;
+
+SELECT * FROM Szak;
+
+SELECT * FROM Beteg;
+
+SELECT * FROM Vény;
+
+SELECT * FROM Gyógyszer;
+
+SELECT * FROM Kiszerelés;
+
+SELECT * FROM Termék;
