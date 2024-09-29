@@ -1,0 +1,55 @@
+
+use ugyfelszolg
+
+
+SELECT * FROM dbo.CIKK;
+SELECT * FROM dbo.TERMÉK;
+SELECT * FROM dbo.ELADÁS;
+SELECT * FROM dbo.CSERE;
+SELECT * FROM dbo.VISSZAFIZ;
+
+
+INSERT [dbo].[CIKK] ([cikkszám], [megnev], [idokorlát]) VALUES (N'c44       ', N'mosogatógép                                          ', 5)
+INSERT [dbo].[CIKK] ([cikkszám], [megnev], [idokorlát]) VALUES (N'c88       ', N'tea főző                                             ', 2)
+INSERT [dbo].[CIKK] ([cikkszám], [megnev], [idokorlát]) VALUES (N'c99       ', N'elektromos kerékpár                                  ', 7)
+INSERT [dbo].[CIKK] ([cikkszám], [megnev], [idokorlát]) VALUES (N'c101      ', N'hangszóró                                            ', 4)
+INSERT [dbo].[CIKK] ([cikkszám], [megnev], [idokorlát]) VALUES (N'c202      ', N'laptop                                               ', 1)
+
+
+INSERT [dbo].[TERMÉK] ([cikkszám], [gyártsz], [állapot]) VALUES (N'c44       ', N'444                 ', N'V')
+INSERT [dbo].[TERMÉK] ([cikkszám], [gyártsz], [állapot]) VALUES (N'c88       ', N'888                 ', N'K')
+INSERT [dbo].[TERMÉK] ([cikkszám], [gyártsz], [állapot]) VALUES (N'c99       ', N'999                 ', N'B')
+INSERT [dbo].[TERMÉK] ([cikkszám], [gyártsz], [állapot]) VALUES (N'c101      ', N'1010                ', N'V')
+INSERT [dbo].[TERMÉK] ([cikkszám], [gyártsz], [állapot]) VALUES (N'c202      ', N'2020                ', N'K')
+
+
+
+
+INSERT [dbo].[ELADÁS] ([cikkszám], [gyártsz], [kelt], [ár]) VALUES (N'c44       ', N'444                 ', '2015-09-30', 35000.0000);
+INSERT [dbo].[ELADÁS] ([cikkszám], [gyártsz], [kelt], [ár]) VALUES (N'c88       ', N'888                 ', '2023-09-29', 7000.0000);
+INSERT [dbo].[ELADÁS] ([cikkszám], [gyártsz], [kelt], [ár]) VALUES (N'c99       ', N'999                 ', '2023-09-28', 250000.0000);
+INSERT [dbo].[ELADÁS] ([cikkszám], [gyártsz], [kelt], [ár]) VALUES (N'c101      ', N'1010                ', '2023-09-27', 15000.0000);
+INSERT [dbo].[ELADÁS] ([cikkszám], [gyártsz], [kelt], [ár]) VALUES (N'c202      ', N'2020                ', '2023-09-26', 200000.0000);
+
+
+
+INSERT [dbo].[CSERE] ([cikkszám], [új_gyártsz], [dátum1], [gyártsz])  VALUES (N'c44       ', N'4444                ', '2023-09-28', N'444                 ');
+INSERT [dbo].[CSERE] ([cikkszám], [új_gyártsz], [dátum1], [gyártsz])  VALUES (N'c88       ', N'8888                ', '2023-09-29', N'888                 ');
+INSERT [dbo].[CSERE] ([cikkszám], [új_gyártsz], [dátum1], [gyártsz])  VALUES (N'c99       ', N'9999                ', '2023-09-30', N'999                 ');
+INSERT [dbo].[CSERE] ([cikkszám], [új_gyártsz], [dátum1], [gyártsz])  VALUES (N'c101      ', N'1011                ', '2023-09-25', N'1010                ');
+INSERT [dbo].[CSERE] ([cikkszám], [új_gyártsz], [dátum1], [gyártsz])  VALUES (N'c202      ', N'2021                ', '2023-09-24', N'2020                ');
+
+
+INSERT [dbo].[VISSZAFIZ] ([cikkszám], [új_gyártsz], [dátum2])VALUES (N'c44       ', N'4444                 ', '2023-09-30');
+INSERT [dbo].[VISSZAFIZ] ([cikkszám], [új_gyártsz], [dátum2])VALUES (N'c88       ', N'8888                 ', '2023-09-29');
+INSERT [dbo].[VISSZAFIZ] ([cikkszám], [új_gyártsz], [dátum2])VALUES (N'c99       ', N'9999                 ', '2023-09-28');
+INSERT [dbo].[VISSZAFIZ] ([cikkszám], [új_gyártsz], [dátum2])VALUES (N'c101      ', N'1011                ', '2023-09-27');
+INSERT [dbo].[VISSZAFIZ] ([cikkszám], [új_gyártsz], [dátum2])VALUES (N'c202      ', N'2021                ', '2023-09-26');
+
+
+
+SELECT * FROM dbo.CIKK;
+SELECT * FROM dbo.TERMÉK;
+SELECT * FROM dbo.ELADÁS;
+SELECT * FROM dbo.CSERE;
+SELECT * FROM dbo.VISSZAFIZ;
