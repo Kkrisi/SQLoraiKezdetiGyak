@@ -22,7 +22,8 @@ INSERT [dbo].[TERMÉK] ([cikkszám], [gyártsz], [állapot]) VALUES (N'c99      
 INSERT [dbo].[TERMÉK] ([cikkszám], [gyártsz], [állapot]) VALUES (N'c101      ', N'1010                ', N'V')
 INSERT [dbo].[TERMÉK] ([cikkszám], [gyártsz], [állapot]) VALUES (N'c202      ', N'2020                ', N'K')
 
-
+- UPDATE CIKK
+-- UPDATE TERMÉK
 
 
 INSERT [dbo].[ELADÁS] ([cikkszám], [gyártsz], [kelt], [ár]) VALUES (N'c44       ', N'444                 ', '2015-09-30', 35000.0000);
