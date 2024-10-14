@@ -1,0 +1,109 @@
+use szálloda
+-- a tavalyi script futtatásával történt a létrehozás
+
+-- a szükséges megszorítások beépítése
+
+SELECT * FROM szobatipus
+SELECT * FROM  szoba
+SELECT * FROM ügyfél
+SELECT * FROM foglalt
+SELECT * FROM lakik
+
+
+
+ALTER TABLE szobatipus
+ADD CONSTRAINT sztip1 CHECK (ágy > 0 AND ár > 0)
+
+INSERT INTO szobatipus VALUES('W', 12500, 0)
+-- nem fogja felvinni!
+
+
+
+ALTER TABLE foglalt
+ADD CONSTRAINT fogl1 CHECK (mettől < meddig)
+
+
+INSERT INTO foglalt VALUES (101, '20241014', '20241017', 101, GETDATE(), null)
+INSERT INTO foglalt VALUES (101, '20241010', '20241001', 101, GETDATE(), null) -- ezt nem fogja tudni felvinni
+INSERT INTO foglalt VALUES (101, '20241015', '20241020', 101, GETDATE(), null) -- ez ütközéses ugyanarra a szobára vonatkozik
+
+
+ALTER TABLE foglalt
+ADD CONSTRAINT fogl2 CHECK (CAST(fogl_dátuma AS DATE) <= mettől)
+
+
+-- SELECT GETDATE(), CAST(GETDATE() AS DATE), CAST(GETDATE() AS TIME)
+
+
+
+DELETE FROM foglalt
+
+
+ALTER TABLE foglalt
+ADD CONSTRAINT fogl2 CHECK (CAST(fogl_dátuma AS DATE) <= mettől)
+INSERT INTO foglalt VALUES (101, '20241014', '20241017', 101, GETDATE(), null)
+
+
+
+ALTER TABLE foglalt
+ADD CONSTRAINT fogl3 CHECK (dbo.ütközik(szszám, mettől)=0)
+
+
+
+
+go
+
+create function ütközik
+(
+@szoba smallint,
+@dtól date
+)
+returns bit
+as
+begin
+	declare @dig date, @vissza bit = 0
+	select @dig=meddig from foglalt where szszám=@szoba and mettől=@dtól
+	IF 1 < (select COUNT(*) from foglalt 
+			where szszám=@szoba and not (meddig <=@dtól OR mettől >= @dig))
+		set @vissza=1
+	return @vissza
+
+end
+
+
+
+insert into ügyfél (név, cím) values ('Ő', 'valahol')
+select * from ügyfél
+
+alter table lakik
+add constraint lakik check (dbo.sokan() = 0)
+
+
+go
+
+create function sokan
+(
+-- fogl_id ha lenne
+@szoba smallint,
+@dtól date
+)
+returns bit
+as
+begin
+	declare @vissza bit=0
+	IF (select COUNT(*) from lakik where szszám=@szoba and mettől=@dtól)
+		>
+		(select ágy from szoba s inner join szobatipus t on s.sztip = t.sztip
+		where szszám=101)
+		set @vissza=1
+		return @vissza
+end
+
+
+alter table lakik add constraint lakik check (dbo.sokan(szszám, mettől) = 0)
+
+
+
+insert into lakik values (101, '20241014', 101)
+insert into lakik values (101, '20241014', 102)
+insert into lakik values (101, '20241014', 103)
