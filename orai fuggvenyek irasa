@@ -1,0 +1,250 @@
+use ugyfelszolg
+
+
+select * from CIKK
+select * from TERMÉK
+select * from ELADÁS
+select * from CSERE
+
+
+
+--1.
+create view nezet1 as
+-- melyik cikkből hányat adtál el eddig?
+-- az egyes cikkekből hányat...
+-- adott szó nélküli, tehát lehet nézet
+
+select cikkszám, COUNT(*) as ennyit_adtak_el
+from ELADÁS
+-- where nincs
+group by cikkszám
+
+
+
+go
+
+--2.
+create function lek2
+-- adott cikkből hány csere történt?
+-- adott miatt lesz 1 bemenő paraméter, tehát fgv kell
+-- a fuggveny visszaad 1 értéket, azaz skalárt vissza adó függvény kell
+(
+	@cikk char(10)
+)
+returns smallint
+as
+begin
+	return
+	(
+	select COUNT(*)
+	from CSERE
+	where cikkszám=@cikk
+	)
+end
+
+
+--select dbo.lek2('c55')
+
+select *, dbo.lek2(cikkszám)
+from CIKK
+
+
+
+
+
+
+go
+
+--3.
+create function lek3
+-- adott évben milyen cikkekből történik visszafizetés?
+-- 1 param, és több értéket adhat vissza
+-- táblát visszaadó függvény kell:
+(
+	@év smallint
+)
+returns table
+as
+begin
+	return 
+	(
+		select distinct cikkszám
+		from VISSZAFIZ
+		where year(dátum2) = @év
+	)
+end
+--select * from dbo.lek3(2016)
+
+
+
+
+
+
+
+
+
+go
+
+
+-- Feladatok
+
+--4.
+
+-- 2 adott dátum között mekkora árbevétel keletkezett eladásból
+-- Függvény ami skalárt ad vissza = FS
+create function lek4
+(
+	@datumtol date
+	,@datumig date
+)
+returns money
+as
+begin
+	return
+	(
+	select SUM(ár)
+	from ELADÁS
+	where kelt between @datumtol and @datumig 
+	)
+end
+
+select dbo.lek4('20150101','20161231') as árbevétel
+
+
+
+
+--csak akkor írunk funkciot amikor a adott szó benne van
+
+
+
+go
+--5.
+
+
+create view lek5 as
+-- az egyes cikkekbők mikor történt az utolsó eladás
+
+select cikkszám, MAX(kelt) as ekkor
+from ELADÁS
+group by cikkszám
+
+
+
+
+
+
+
+
+
+
+--6.
+go
+create function lek6
+-- adott nevű cikkből hány féle árat fizettünk vissza?
+(
+	@nev char(20)
+)
+returns smallint
+as
+begin
+	return
+	(
+	select count(distinct összeg)
+	from VISSZAFIZ v
+	inner join CIKK c
+	on v.cikkszám = c.cikkszám
+	where megnev like '%' + @nev + '%'
+	)
+end
+
+
+--declare @nev char(20)
+--set @nev='vasaló'
+--select len(@nev)
+
+select dbo.lek6('vasaló') as féle
+
+
+
+
+
+
+--7.
+go
+create function lek7
+-- adott cikből milyen volt az utolsó művelet/tranzakció(pl. csere, visszafizetés)
+(
+	@cikk char(10)
+)
+returns table
+as
+return (
+	select top 1 with ties megjegyzés
+	from 
+		(
+		select kelt as mikor, 'BA' as megjegyzés
+		from ELADÁS
+		--where cikkszám=@cikk
+		UNION
+		select dátum1, 'CS'
+		from CSERE
+		--where cikkszám=@cikk
+		UNION
+		select dátum2, 'VF'
+		from VISSZAFIZ
+		--where cikkszám=@cikk
+		) bt
+	order by mikor desc
+	)
+
+select * from dbo.lek7('c99')
+
+
+
+
+
+
+--8.
+go
+create view lak8 as
+-- mekkora árbevételből mekkora visszafizetési összeg volt eddig?
+select sum(ár) as bevétel, (select sum(összeg) from VISSZAFIZ) as visszafizetes
+from ELADÁS
+
+
+go
+create view lak8b as
+select sum(ár) as bevétel, sum(összeg) as kiadás
+from ELADÁS e
+	left join csere c on c.cikkszám = e.cikkszám and c.gyártsz = e.gyártsz
+	left join VISSZAFIZ v on v.cikkszám = c.cikkszám and v.új_gyártsz = c.új_gyártsz
+
+select * from lek8
+select * from lek8b
+
+
+
+
+
+-- 9.
+go
+create function lek8
+-- adott terméknek hány napon múlva történik a cseréje?
+(
+	@cikk char(10), 
+	@gyszám char(20)
+)
+returns smallint
+as
+begin
+return
+	(
+	select datediff(day,kelt,dátum1)
+	from CSERE c
+	inner join ELADÁS e on c.cikkszám = e.cikkszám and c.gyártsz = e.gyártsz
+	where c.cikkszám = @cikk and c.gyártsz = @gyszám
+	)
+end
+
+select * from CSERE
+select dbo.lek9('c55','666')
