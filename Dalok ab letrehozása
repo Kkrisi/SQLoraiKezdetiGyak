@@ -1,0 +1,157 @@
+create database Dalok
+
+go
+use dalok
+
+create table MŰFAJ
+(
+id int identity (11,1), --auto increment
+elnevezes varchar(30) not null,
+primary key (id),
+unique (elnevezes)
+)
+
+insert into műfaj values ('rock')
+insert into műfaj values ('pop')
+
+select * from műfaj
+
+create table DAL
+(
+azon int identity (1001,1),
+cím varchar(30) not null,
+keletkezés date not null,
+műfaj int not null,
+eredeti int,
+primary key (azon),
+foreign key (műfaj) references Műfaj(id),
+foreign key (eredeti) references Dal(azon),
+)
+
+insert into dal values ('radio gaga', '19811011', 11, null)
+insert into dal values ('radio gaga', '19871212', 11, 1001)
+
+select * from dal
+
+go
+
+create function eredeti
+(
+@dal int
+)
+returns bit
+as
+begin
+	declare @vissza bit=0
+	if (select eredeti from dal where azon=@dal) is null
+		set @vissza=1
+	return @vissza
+end
+
+go
+
+--select dbo.eredeti(1001)
+--select *, dbo.eredeti(azon) from dal
+
+alter table dal
+add constraint ck_eredeti
+check (dbo.eredeti(eredeti)=1 or eredeti is null)
+
+--insert into dal values('radio gaga', '20041212', 12, 1002)
+--insert into dal values('radio gaga', '20041212', 13, 1002)
+
+create table SZEM_EGY
+(
+kód int identity (101,1),
+név varchar(30) not null,
+kezd_év smallint not null,
+vége_év smallint,
+jelzés char(1) not null check (jelzés='S' or jelzés='E'),
+primary key (kód),
+check(vége_év is null or vége_év>=kezd_év)
+)
+
+insert into szem_egy values ('Queen', 1978, null, 'E')
+insert into szem_egy values ('Fraddie Mercury', 1978, 1991, 'S')
+
+select *from szem_egy
+
+
+create table TAGJA
+(
+együttes int,
+személy int,
+dátumtól date,
+dátumig date,
+primary key (együttes, személy, dátumtól),
+foreign key (személy) references szem_egy (kód),
+check(dátumig is null or dátumig>dátumtól)
+)
+
+go
+
+create function jelzés
+(
+@kód int
+)
+returns char(1)
+as
+begin
+	return
+	(select jelzés from szem_egy where kód=@kód)
+end
+
+--select dbo.jelzés(104)
+--select *, dbo.jelzés(kód) from szem_egy
+
+alter table tagja
+add constraint CK_jelzésE check(dbo.jelzés(együttes)='E')
+alter table tagja
+add constraint CK_jelzésS check(dbo.jelzés(személy)='S')
+
+select * from dal
+select * from  szem_egy
+select * from  tagja
+
+
+insert into tagja values (101,102,'19780102','19911020')
+insert into tagja values (101,103,'19780102','null')
+
+
+
+
+
+select *, ISNULL(dátumig, GETDATE()) from tagja
+select *, isnull(vége_év, year(getdate())) from szem_egy
+
+
+
+create table SZEREP
+(
+sz_id tinyint identity(51,1),
+megnevezés varchar(30) not null,
+jogdíjas bit not null,
+primary key (sz_id),
+unique (megnevezés),
+)
+
+insert into szerep values ('zeneszerző',1)
+insert into szerep values ('szövegíró',1)
+
+select * from szerep
+
+go
+
+create table ALKOTJA
+(
+alk_id int identity(500,1),
+személy int not null,
+dal int not null,
+szerep tinyint not null,
+primary key (alk_id),
+unique (személy, dal, szerep),
+foreign key (személy) references dal (azon),
+foreign key (szerep) references szerep (sz_id),
+check(dbo.jelzés(személy)='S')
+)
+
