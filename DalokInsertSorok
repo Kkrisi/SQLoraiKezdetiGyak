@@ -1,0 +1,61 @@
+
+
+select * from műfaj
+select * from dal
+select * from szem_egy
+select * from tagja
+select * from szerep
+select * from alkotja
+
+
+
+insert into DAL values ('Radio Gaga', '1984-02-01', 12, null);
+insert into DAL values ('Bohemian Rhapsody', '1975-10-31', 12, null);
+insert into DAL values ('Under Pressure', '1981-10-26', 12, null);
+insert into DAL values ('Another One Bites the Dust', '1980-08-22', 12, null);
+insert into DAL values ('Imagine', '1971-10-11', 13, null);
+insert into DAL values ('Thriller', '1982-11-30', 13, null);
+insert into DAL values ('Yesterday', '1965-08-26', 14, null);
+
+
+insert into SZEM_EGY values ('Queen', 1970, null, 'E');
+insert into SZEM_EGY values ('Freddie Mercury', 1970, 1991, 'S');
+insert into SZEM_EGY values ('Brian May', 1970, null, 'S');
+insert into SZEM_EGY values ('John Lennon', 1960, 1980, 'S');
+insert into SZEM_EGY values ('The Beatles', 1960, 1970, 'E');
+insert into SZEM_EGY values ('Paul McCartney', 1960, null, 'S');
+
+
+insert into TAGJA values (101, 102, '1970-01-01', '1991-11-24'); -- Freddie Mercury in Queen
+insert into TAGJA values (101, 103, '1970-01-01', null);         -- Brian May in Queen
+insert into TAGJA values (105, 104, '1960-01-01', '1980-12-08'); -- John Lennon in The Beatles
+insert into TAGJA values (105, 106, '1960-01-01', null);         -- Paul McCartney in The Beatles
+
+
+insert into SZEREP values ('zeneszerző', 1);
+insert into SZEREP values ('szövegíró', 1);
+insert into SZEREP values ('előadó', 0);
+insert into SZEREP values ('producer', 0);
+
+
+insert into ALKOTJA values (102, 1017, 51); -- Freddie Mercury, Radio Gaga, zeneszerző
+insert into ALKOTJA values (103, 1017, 52); -- Brian May, Radio Gaga, szövegíró
+insert into ALKOTJA values (102, 1018, 53); -- Freddie Mercury, Bohemian Rhapsody, előadó
+insert into ALKOTJA values (106, 1022, 51); -- Paul McCartney, Imagine, zeneszerző
+insert into ALKOTJA values (104, 1024, 51); -- John Lennon, Yesterday, zeneszerző
+insert into ALKOTJA values (104, 1024, 52); -- John Lennon, Yesterday, szövegíró
+
+
+create table ALKOTJA
+(
+    alk_id int identity(500,1),
+    személy int not null,
+    dal int not null,
+    szerep tinyint not null,
+    primary key (alk_id),
+    unique (személy, dal, szerep),
+    foreign key (személy) references szem_egy (kód),
+    foreign key (dal) references dal (azon),
+    foreign key (szerep) references szerep (sz_id),
+    check(dbo.jelzés(személy)='S')
+);
