@@ -1,0 +1,411 @@
+ create database Dalok
+go
+use dalok
+
+create table MŰFAJ
+(
+id int identity (11,1),
+elnevezés varchar(30) not null,
+primary key (id),
+unique (elnevezés)
+)
+
+create table DAL
+(
+azon int identity (1001,1),
+cím varchar(30) not null,
+keletkezés date not null,
+műfaj int not null,
+eredeti int,
+primary key (azon),
+foreign key (műfaj) references Műfaj(id),
+foreign key (eredeti) references Dal(azon),
+)
+
+insert into műfaj values ('rock')
+insert into műfaj values ('pop')
+insert into műfaj values ('metal')
+
+
+insert into DAL values ('Radio Gaga', '1984-02-01', 11, null);
+insert into DAL values ('Bohemian Rhapsody', '1975-10-31', 11, null);
+insert into DAL values ('Under Pressure', '1981-10-26', 11, null);
+
+select * from műfaj
+select * from dal
+
+insert into dal values ('radio gaga', '19811011',13, null)
+insert into dal values ('radio gaga', '20121212',11, 1002)
+go
+
+create function eredeti
+(
+@dal int
+)
+returns bit
+as
+begin
+	declare @vissza bit=0
+	if (select eredeti from dal where azon=@dal) is null
+		set @vissza=1
+	return @vissza
+end
+
+--select dbo.eredeti(1001)
+--select * , dbo.eredeti(azon) from dal
+
+alter table dal
+add constraint ck_eredeti 
+check (dbo.eredeti(eredeti)=1 or eredeti is null)
+
+--insert into dal values ('radio gaga', '20041212',12, 1002)
+-- insert into dal values ('radio gaga', '20041212',13, 1002)
+
+-- SZEM_EGY (kód, név, kezd_év, vége_év, jelzés)
+-- TAGJA (együttes, személy, dátumtól, dátumig)
+create table SZEM_EGY
+(
+kód int identity (101,1),
+név varchar(30) not null,
+kezd_év smallint not null,
+vége_év smallint, 
+jelzés char(1) not null check (jelzés='S' or jelzés='E'),
+primary key (kód),
+check (vége_év is null or vége_év>=kezd_év)
+)
+
+
+
+insert into szem_egy
+values ('Queen', 1978, null, 'E')
+
+insert into szem_egy
+values ('Freddie Mercury', 1978, 1991, 'S')
+insert into szem_egy
+values ('Brian May', 1978, null, 'S')
+insert into szem_egy
+values ('Lady Gaga', 2001, null, 'S')
+
+select * from műfaj
+select * from dal
+select * from szem_egy
+
+go
+
+create table TAGJA
+(
+együttes int, 
+személy int,
+dátumtól date,
+dátumig date,
+primary key (együttes, személy, dátumtól),
+foreign key (együttes) references szem_egy(kód),
+foreign key (személy) references szem_egy(kód),
+check (dátumig is null or dátumig>dátumtól)
+)
+
+
+go
+
+create function jelzése
+(
+@kód int
+)
+returns char(1)
+as
+begin
+	return
+	(select jelzés from szem_egy where kód=@kód)
+end
+
+-- select dbo.jelzése(104)
+--select *, dbo.jelzése(kód) from szem_egy
+
+alter table tagja
+add constraint CK_jelzésE check(dbo.jelzése(együttes)='E')
+alter table tagja
+add constraint CK_jelzésS check(dbo.jelzése(személy)='S')
+
+
+select * from műfaj
+select * from dal
+select * from szem_egy
+select * from tagja
+
+
+insert into tagja 
+values (101,102,'19780102','19911020')
+insert into tagja 
+values (101,103,'19780102',null)
+
+-- a személy tagságának ideje essen az együttes működési idejébe: 
+-- a tag 2 adata: dátumtól dátumig (legfeljebb máig) évei essenek az együttes működési intervallumába (kezd. és vége évek közé; itt is legfeljebb idén a vége)
+-- HF
+
+select *, ISNULL(dátumig, GETDATE()) from tagja
+select *, isnull(vége_év, year(getdate())) from szem_egy
+-- SZEREP (sz_id, megnevezés, jogdíjas)
+
+
+create table SZEREP
+(
+sz_id tinyint identity(51,1),
+megnevezés varchar(30) not null,
+jogdíjas bit not null,
+primary key (sz_id),
+unique (megnevezés),
+)
+insert into szerep
+values ('zeneszerző', 1)
+insert into szerep
+values ('szövegíró', 1)
+insert into szerep
+values ('hangszerelő', 0)
+insert into szerep
+values ('fuvolaszólam', 0)
+
+
+
+-- ALKOTJA (alk_id, személy, dal, szerep)
+create table ALKOTJA 
+(
+alk_id int identity (500,1),
+személy int not null,
+dal int not null,
+szerep tinyint not null,
+primary key (alk_id),
+unique (személy, dal, szerep),
+foreign key (személy) references szem_egy (kód),
+foreign key (dal) references dal (azon),
+foreign key (szerep) references szerep (sz_id),
+check (dbo.jelzése(személy)='S')
+)
+
+go
+create function jogdíjas
+(
+@szerep tinyint
+)
+returns bit
+as
+begin
+	return 
+	(select jogdíjas from szerep where sz_id=@szerep)
+end
+
+select * from szerep
+--select dbo.jogdíjas(53)
+
+
+alter table alkotja
+add constraint ck_jogos 
+check(NOT dbo.jogdíjas(szerep)=1 OR dbo.eredeti(dal)=1)
+-- dbo.jogdíjas(szerep)=0 OR dbo.eredeti(dal)=1
+
+
+select * from műfaj
+select * from dal
+select * from szem_egy
+select * from tagja
+select * from szerep
+
+insert into alkotja
+values (102,1011,51)
+insert into alkotja
+values (103,1012,52)
+
+select * from alkotja
+
+--insert into alkotja
+--values (102,1002,51)
+insert into alkotja
+values (103,1001,53)
+insert into alkotja
+values (103,1002,53)
+
+
+
+-- ezzel még folytattuk volna 
+-- (megígértem, h küldöm, hátha máris vinnétek fel törzsadatokat... ui. vigyázzatok: nem minden megszorítás van már benne)
+
+
+-- VÁLT (alkotja, dátumig, régi_személy, régi_dal, régi_szerep) aut. naplózás táblája
+create table VÁLT
+(
+alkotja int,
+eddig date,
+személy int,
+dal int,
+szerep tinyint,
+primary key (alkotja, eddig)
+-- KK sem kell, mert ide majd nem írhat bele a fh.
+)
+-- megj. ha a term. kulcs marad az ALKOTJAban és annak részei módosíthatók, amit elnaplózunk, 
+-- akkor a VÁLT(alkotja régi term. kulcsa, dátumig) nem is hivatkozhat már a szülőre
+-- időrendben persze lekérdezhető minden alkotói vált. bármely dalról azon verzióban is...
+
+
+-- ELŐADJA (szem_egy, dal)
+create table ELŐADJA 
+(
+szem_egy int,
+dal int,
+primary key (szem_egy, dal),
+foreign key (szem_egy) references szem_egy (kód),
+foreign key (dal) references dal (azon),
+)
+-- megszorítás: az előadók személye(!) egyszer legyen felvíve 
+-- hasznos lekérdezés lenne a dalok előadóinak személyét megjeleníteni egyébként is
+-- HF
+
+
+-- PLATFORM (platform)
+create table PLATFORM
+(
+platform varchar(20) primary key
+)
+-- MEGJELENT (dal, dátum, platform, beszerzés) 
+create table MEGJELENT
+(
+dal int,
+megjelenés date,
+platform varchar(20), 
+beszerzés date,
+primary key (dal, megjelenés, platform),
+foreign key (dal) references dal (azon),
+foreign key (platform) references platform(platform),
+check (beszerzés is null or beszerzés>=megjelenés)
+)
+
+
+go
+--megszorítss, ha a dátumtol dátumg évei beleesnek a mukodesi idoszakába
+create function lek10
+
+
+
+-- megszorítás: a tag 2 adata dátumtól dátumig (legfeljebb máig) évei essenek
+-- az együttes működési intervallumába (kezd. és vége évek közé; itt is legfeljebb idén a vége)
+go
+
+create function jo_tagja
+(
+@egy int,
+@dtól date,
+@dig date
+)
+returns bit
+as
+begin
+declare @vissza bit=0
+declare @k smallint, @v smallint
+
+select @k=kezd_év,@v=ISNULL(vége_év, year(GETDATE())) from SZEM_EGY where kód = @egy
+if year(@dtól) between @k and @v
+and year(ISNULL(@dig, getdate())) between @k and @v
+set @vissza = 1
+
+return @vissza
+end
+
+--select dbo.jo_tagja(101,'19680101',null)
+
+alter table tagja
+add constraint jotag check (dbo.jo_tagja(együttes, dátumtól, dátumig)=1);
+
+insert into SZEM_EGY values('Roger Tylor',1972,null,'S')
+insert into TAGJA values(101,105,'19771111',null)
+insert into TAGJA values(101,105,'19781111',null)
+
+insert into ELŐADJA values (101, 1012), (101, 1011), (104, 1011)
+
+
+select * from dal
+select * from szem_egy
+select * from ELŐADJA
+select * from TAGJA
+
+
+select dal, szem_egy
+from ELŐADJA e
+	inner join SZEM_EGY sz on e.szem_egy = sz.kód
+	where sz.jelzés = 'S'
+
+go
+--vagy
+alter view eloadok_szemelye as 
+select dal, szem_egy as ki
+from ELŐADJA
+where dbo.jelzése(szem_egy)='S'
+
+union
+
+select dal, személy
+from ELŐADJA
+	inner join TAGJA on szem_egy = együttes
+	inner join DAL on dal=azon and keletkezés between dátumtól and ISNULL(dátumig, GETDATE())
+
+
+
+
+select cím as dal, név as tagja
+from eloadok_szemelye e
+	inner join DAl d on e.dal=d.azon
+	inner join SZEM_EGY sz on sz.kód = e.ki
+
+
+
+select * from dal
+select * from szem_egy
+select * from ELŐADJA
+select * from dal
+select * from TAGJA
+select * from szerep
+
+select * from dal
+select * from ELŐADJA
+select * from ALKOTJA
+
+
+
+--Mely dalnak melyik előadója van az alkotói között?
+
+select DAL
+from eloadok_szemelye
+
+intersect
+
+select DAL
+from ALKOTJA
+
+
+
+
+
+--Név szerint ki adott elő Zé szerzeményt?
+
+
+select * 
+from ELŐADJA
+where dal in
+(
+	select DAL
+	from ALKOTJA a
+		inner join SZEM_EGY sze on a.személy = sze.kód
+		inner join SZEREP sz on sz.sz_id = a.szerep
+	where sz.megnevezés = 'zeneszerzo' and sze.név = 'Freddie Mercury'
+)
+
+
+--vagy join-nal
+select szem_egy, (select név from SZEM_EGY where kód=szem_egy)
+from ELŐADJA e
+inner join
+(
+	select DAL
+	from ALKOTJA a
+		inner join SZEM_EGY sze on a.személy = sze.kód
+		inner join SZEREP sz on sz.sz_id = a.szerep
+	where sz.megnevezés = 'zeneszerzo' and sze.név = 'Freddie Mercury'
+) d on d.dal = e.dal
+
