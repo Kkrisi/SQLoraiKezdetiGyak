@@ -1,0 +1,56 @@
+
+Az egyes táblákhoz tartozó megszorítások a következők:
+
+MŰFAJ (mufaj_id, megnevezés)
+mufaj_id: Egyedi azonosító, nem lehet null értékű (primary key).
+megnevezés: Egyedi érték, nem lehet üres. Például két műfaj nem szerepelhet azonos névvel.
+
+
+NYELV (nyelv_id, megnevezés)
+nyelv_id: Egyedi azonosító, nem lehet null értékű (primary key).
+megnevezés: Egyedi érték, nem lehet üres. Az egyes nyelvek neve különböző kell legyen.
+
+
+FILM (film_id, cím, hossz, leírás, nyelv, műfaj)
+film_id: Egyedi azonosító, nem lehet null értékű (primary key).
+cím: Nem lehet üres, minden filmnek egyedi címe lehet.
+hossz: Pozitív egész számot kell tartalmazzon (percben mért hossz).
+leírás: Lehet null vagy üres, opcionális mező.
+nyelv: Idegen kulcs (foreign key), amely a NYELV táblában szereplő nyelv_id-re hivatkozik. Csak létező nyelv_id érték szerepelhet.
+műfaj: Idegen kulcs (foreign key), amely a MŰFAJ táblában szereplő mufaj_id-re hivatkozik. Csak létező mufaj_id érték szerepelhet.
+
+
+VETÍTÉS (dátum, óra, perc, felirat, szinkron, film, terem)
+dátum, óra, perc: Együtt egyedi azonosítót alkotnak (egy vetítést csak egyszer lehet az adott időpontban indítani egy teremben).
+felirat: Bináris érték (0 vagy 1), jelzi, hogy van-e felirat.
+szinkron: Bináris érték (0 vagy 1), jelzi, hogy van-e szinkron.
+film: Idegen kulcs (foreign key), amely a FILM táblában szereplő film_id-re hivatkozik.
+terem: Idegen kulcs (foreign key), amely a TEREM táblában szereplő terem_id-re hivatkozik.
+
+TEREM (terem_id, sor, oszlop, típus)
+terem_id: Egyedi azonosító (primary key).
+sor, oszlop: Pozitív egész számok, a terem méretét (sorok és oszlopok száma) adják meg.
+típus: Nem lehet üres, és csak előre meghatározott értékeket tartalmazhat (pl. "Normál", "VIP").
+
+
+JEGYÁR (jegyár_id, megnevezés, ár)
+jegyár_id: Egyedi azonosító (primary key).
+megnevezés: Nem lehet üres, minden jegytípus megnevezése különböző kell legyen.
+ár: Pozitív szám, a jegy árát adja meg.
+
+SZÉK (sor, oszlop, állapot, nyugta, vetítés, jegyár)
+sor, oszlop: Egyedi azonosítóként viselkednek egy adott terem/vetítés viszonylatában.
+állapot: Meghatározott értékek közül választhat: "szabad", "lefoglalt", "megvásárolt".
+nyugta: Idegen kulcs (foreign key), amely a NYUGTA táblára hivatkozik, ha a szék "lefoglalt" vagy "megvásárolt" állapotban van.
+vetítés: Idegen kulcs (foreign key), amely a VETÍTÉS táblára hivatkozik.
+jegyár: Idegen kulcs (foreign key), amely a JEGYÁR táblára hivatkozik, ha a szék "megvásárolt" állapotban van.
+
+NYUGTA (nyugtaszám, szék_mennyiség, jegyár)
+nyugtaszám: Egyedi azonosító (primary key).
+szék_mennyiség: Pozitív egész szám, a vásárlás során érintett székek számát jelöli.
+jegyár: Idegen kulcs (foreign key), amely a JEGYÁR táblára hivatkozik, és az összes szék vásárlásának végösszegét tartalmazza.
+
+
+
+
+
