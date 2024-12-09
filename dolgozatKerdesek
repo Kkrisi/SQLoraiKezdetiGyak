@@ -1,0 +1,75 @@
+
+--Adott előadó hány dalt adott elő másokkal? 
+create function lek_eloado
+(
+	@eloado int
+)
+returns smallint
+as
+begin
+return(
+	select distinct(Count(e.dal)) as kozos_dalok_szama, sz.név as előadók
+	from ELŐADJA e
+	inner join SZEM_EGY sz on e.szem_egy=sz.kód
+	where e.szem_egy = @eloado
+	Group by e.dal
+)
+end
+
+
+
+select * dbo.lek_eloado(10) from ELŐADJA
+
+
+
+--Két adott együttes mit adott elő együtt?
+create function lek_egyutt
+(
+	@egyuttes_1 int,
+	@egyuttes_2 int
+)
+returns varchar
+as
+begin
+return(
+	select *
+	from ELŐADJA e
+	inner join SZEM_EGY sz on e.szem_egy=sz.kód
+	inner join TAGJA t on sz.kód=t.együttes and sz.kód=t.személy
+	where együttes = @egyuttes_1 and együttes = @egyuttes_2
+)
+end
+
+select * dbo.lek_egyutt(11, 12) from Tagja
+
+
+go
+
+--Ki hányszor adta elő a Cé című dal feldolgozását?
+create view hanyszor_feldolgzoas as
+select count(*)
+from ELŐADJA e
+where dal in
+(
+	select Dal d
+	from ALKOTJA a
+	inner join SZEM_EGY sz on a.személy=sz.kód
+	inner join SZEREP szer on szer.sz_id=a.szerep
+)
+
+select * from hanyszor_feldolgzoas
+
+
+--Mely feldolgozás melyik előadója nincs az eredeti dal előadói között?
+create view nem_eredeti as
+select e.szem_egy
+from ELŐADJA e
+	inner join SZEM_EGY sz on e.szem_egy=sz.kód
+	inner join Dal d on e.dal=d.azon
+	where d.eredeti is null
+
+select * from nem_eredeti
+
+
+
+
