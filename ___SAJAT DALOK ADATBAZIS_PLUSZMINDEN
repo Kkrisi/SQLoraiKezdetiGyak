@@ -1,0 +1,594 @@
+
+create database Dalok
+
+
+
+go
+use dalok
+
+-- Először hozzuk létre azokat a táblákat, amelyeket mások hivatkoznak
+
+CREATE TABLE MŰFAJ (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    elnevezés NVARCHAR(255) NOT NULL
+);
+
+CREATE TABLE SZEM_EGY (
+    kód INT IDENTITY(1,1) PRIMARY KEY, -- Egyedi azonosító automatikus növekménnyel
+    név NVARCHAR(255) NOT NULL,
+    jelzés CHAR(1) NOT NULL -- 'S' = személy, 'E' = együttes
+);
+
+CREATE TABLE SZEREP (
+    sz_id INT IDENTITY(1,1) PRIMARY KEY,
+    megnevezés NVARCHAR(255) NOT NULL,
+    jogdíjas BIT NOT NULL -- BIT típus a logikai értékekhez
+);
+
+CREATE TABLE PLATFORM (
+    platform INT IDENTITY(1,1) PRIMARY KEY,
+    név NVARCHAR(255) NOT NULL
+);
+
+-- Ezután jönnek azok a táblák, amelyek idegen kulcsokat használnak
+
+CREATE TABLE DAL (
+    azon INT IDENTITY(1,1) PRIMARY KEY, -- Egyedi azonosító automatikus növekménnyel
+    cím NVARCHAR(255) NOT NULL,
+    műfaj INT NULL, -- Kapcsolat a MŰFAJ táblával
+    eredeti INT NULL, -- Kapcsolat eredeti együttesre
+    FOREIGN KEY (műfaj) REFERENCES MŰFAJ(id),
+    FOREIGN KEY (eredeti) REFERENCES SZEM_EGY(kód)
+);
+
+CREATE TABLE MEGJELENT (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    dal INT NOT NULL, -- Kapcsolat a DAL táblával
+    platform INT NOT NULL, -- Kapcsolat a PLATFORM táblával
+    megjelenés DATE NULL,
+    FOREIGN KEY (dal) REFERENCES DAL(azon),
+    FOREIGN KEY (platform) REFERENCES PLATFORM(platform)
+);
+
+CREATE TABLE ELŐADJA (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    dal INT NOT NULL, -- Kapcsolat a DAL táblával
+    szem_egy INT NOT NULL, -- Kapcsolat a SZEM_EGY táblával
+    FOREIGN KEY (dal) REFERENCES DAL(azon),
+    FOREIGN KEY (szem_egy) REFERENCES SZEM_EGY(kód)
+);
+
+CREATE TABLE ALKOTJA (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    dal INT NOT NULL, -- Kapcsolat a DAL táblával
+    személy INT NOT NULL, -- Kapcsolat a SZEM_EGY táblával
+    szerep INT NOT NULL, -- Kapcsolat a SZEREP táblával
+    FOREIGN KEY (dal) REFERENCES DAL(azon),
+    FOREIGN KEY (személy) REFERENCES SZEM_EGY(kód),
+    FOREIGN KEY (szerep) REFERENCES SZEREP(sz_id)
+);
+
+CREATE TABLE TAGJA (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    személy INT NOT NULL, -- Kapcsolat a SZEM_EGY táblával
+    együttes INT NOT NULL, -- Kapcsolat az együttesre
+    dátumtól DATE NOT NULL,
+    dátumig DATE NULL,
+    FOREIGN KEY (személy) REFERENCES SZEM_EGY(kód),
+    FOREIGN KEY (együttes) REFERENCES SZEM_EGY(kód)
+);
+
+
+
+
+
+
+
+
+
+
+
+
+-- MŰFAJ adatok
+INSERT INTO MŰFAJ (elnevezés) VALUES 
+('Rock'),     -- 1
+('Pop');      -- 2
+
+-- SZEM_EGY adatok (személyek és együttesek)
+INSERT INTO SZEM_EGY (név, jelzés) VALUES 
+('John Doe', 'S'),       -- 1 (Személy)
+('Jane Smith', 'S'),     -- 2 (Személy)
+('The Rock Band', 'E'),  -- 3 (Együttes)
+('Pop Stars', 'E');      -- 4 (Együttes)
+
+-- SZEREP adatok
+INSERT INTO SZEREP (megnevezés, jogdíjas) VALUES 
+('Dalszövegíró', 1),     -- 1
+('Zeneszerző', 1),       -- 2
+('Producer', 0);         -- 3
+
+-- PLATFORM adatok
+INSERT INTO PLATFORM (név) VALUES 
+('Spotify'),     -- 1
+('YouTube'),     -- 2
+('Apple Music'); -- 3
+
+-- DAL adatok
+INSERT INTO DAL (cím, műfaj, eredeti) VALUES 
+('Rock Anthem', 1, 3),   -- 1 (The Rock Band, Rock)
+('Pop Hit', 2, 4),       -- 2 (Pop Stars, Pop)
+('Unknown Song', NULL, NULL), -- 3 (Nincs műfaj, nincs eredeti előadó)
+('Multiple Artists Song', NULL, NULL); -- 4 (Több előadó, nincs műfaj)
+
+-- MEGJELENT adatok
+INSERT INTO MEGJELENT (dal, platform, megjelenés) VALUES 
+(1, 1, '2024-01-01'),  -- Rock Anthem - Spotify
+(1, 2, '2024-01-02'),  -- Rock Anthem - YouTube
+(2, 3, '2024-02-01');  -- Pop Hit - Apple Music
+
+-- ELŐADJA adatok
+INSERT INTO ELŐADJA (dal, szem_egy) VALUES 
+(1, 3),  -- Rock Anthem előadja: The Rock Band
+(2, 4),  -- Pop Hit előadja: Pop Stars
+(3, 1),  -- Unknown Song előadja: John Doe
+(4, 1),  -- Multiple Artists Song előadja: John Doe
+(4, 2);  -- Multiple Artists Song előadja: Jane Smith
+
+-- ALKOTJA adatok
+INSERT INTO ALKOTJA (dal, személy, szerep) VALUES 
+(1, 1, 1), -- John Doe alkotta a Rock Anthem-t, mint dalszövegíró
+(2, 2, 2), -- Jane Smith alkotta a Pop Hit-et, mint zeneszerző
+(3, 2, 3); -- Jane Smith alkotta az Unknown Song-ot, mint producer
+
+-- TAGJA adatok
+INSERT INTO TAGJA (személy, együttes, dátumtól, dátumig) VALUES 
+(1, 3, '2020-01-01', NULL), -- John Doe jelenlegi tagja a The Rock Band-nek
+(2, 4, '2021-01-01', NULL); -- Jane Smith jelenlegi tagja a Pop Stars-nak
+
+
+
+
+
+
+select * from dal
+select * from műfaj
+select * from szem_egy
+select * from ELŐADJA
+select * from TAGJA
+select * from szerep
+
+select * from alkotja
+select * from platform
+select * from megjelent
+
+
+
+
+
+
+
+
+
+
+--1. Mely dalok szerepelnek az adatbázisban, de nem szerepelnek megjelenési információik?
+select d.cím as dal, m.megjelenés as megjelenési_dátum
+from DAL d
+left join MEGJELENT m on d.azon = m.dal
+where m.megjelenés is null;
+
+
+
+--2. Kik azok az előadók, akik adtak elő dalokat, de nem tartoznak együtteshez?
+select sz.név
+from SZEM_EGY sz
+left join ELŐADJA e on sz.kód = e.szem_egy
+where sz.jelzés = 'S' AND not exists
+(
+	select 1
+	from TAGJA t
+	where t.személy = sz.kód
+)
+
+
+
+
+--3. Mely dalokat adták elő olyan előadók, akik nem alkotók, és kik az alkotók?
+select d.cím as dal, sz1.név as előadó, sz2.név as alkotó
+from DAL d
+inner join ELŐADJA e on d.azon = e.dal
+inner join SZEM_EGY sz1 on e.szem_egy = sz1.kód
+inner join ALKOTJA a on d.azon = a.dal
+inner join SZEM_EGY sz2 on a.személy = sz2.kód
+where sz1.kód <> sz2.kód
+
+
+
+
+
+--4. Mely daloknak több előadója van, és nincs műfajuk megadva?
+select d.cím as dal, count(e.szem_egy) as előadó_szám
+from DAL d
+left join ELŐADJA e on d.azon = e.dal
+where d.műfaj is null
+group by d.cím
+having count(e.szem_egy) > 1;
+
+
+
+
+
+
+
+--5. Mely dalokat adták elő együttesek, és mikor jelentek meg?
+select d.cím, sz.név, m.megjelenés
+from ELŐADJA e
+inner join SZEM_EGY sz on e.szem_egy=sz.kód
+inner join DAL d on e.dal = d.azon
+inner join MEGJELENT m on d.azon=m.dal
+where sz.jelzés = 'E'
+
+
+
+
+go
+--6. Készíts nézetet azokról az előadókról, akik egy adott műfajú dalokat adtak elő!
+create view eloadok_mufaj_szerint as
+select sz.név, d.cím, m.elnevezés as műfaj
+from ELŐADJA e
+inner join SZEM_EGY sz on e.szem_egy=sz.kód
+inner join DAL d on e.dal=d.azon
+inner join MŰFAJ m on d.műfaj=m.id
+
+select * from eloadok_mufaj_szerint where műfaj='Rock'
+
+
+
+
+
+
+--8. Hozz létre listát a jogdíjas szerepek alkotóiról és a dalaikról!
+select szp.sz_id as szerep, d.cím as dal, sz.név as alkotó
+from ALKOTJA a 
+inner join SZEREP szp on a.szerep=szp.sz_id
+inner join SZEM_EGY sz on a.személy=sz.kód
+inner join DAL d on a.dal=d.azon
+where szp.jogdíjas = 1
+
+
+
+
+
+--9. Melyik dalokat játszotta ugyanaz az előadó különböző együttesekben?
+select d.cím as dal, sz.név as előadó, e1.szem_egy as együttes1, e2.szem_egy as együttes2
+from ELŐADJA e1
+inner join ELŐADJA e2 on e1.dal = e2.dal and e1.szem_egy <> e2.szem_egy
+inner join SZEM_EGY sz on e1.szem_egy = sz.kód
+inner join DAL d on e1.dal = d.azon
+where sz.jelzés = 'S';
+
+
+
+
+--10. Kik játszották együtt a dalokat egy adott időszakban?
+select t1.személy as tag1, t2.személy as tag2, d.cím as dal
+from TAGJA t1
+inner join TAGJA t2 on t1.együttes = t2.együttes and t1.dátumtól <= t2.dátumig and t1.dátumig >= t2.dátumtól
+inner join DAL d on t1.együttes = d.eredeti
+where t1.személy <> t2.személy;
+
+
+
+
+
+--11. Mely dalok voltak népszerűek több platformon egyszerre?
+select d.cím as dal, count(p.platform) as platform_szám
+from MEGJELENT m
+inner join DAL d on m.dal = d.azon
+inner join PLATFORM p on m.platform = p.platform
+group by d.cím
+having count(p.platform) > 1;
+
+
+
+
+
+
+--12. Írj nézetet a jogdíjmentes dalokról!
+create view jogdijmentes_dalok as
+select d.cím as dal, sz.név as alkotó, sr.megnevezés as szerep
+from ALKOTJA a
+inner join SZEM_EGY sz on a.személy = sz.kód
+inner join DAL d on a.dal = d.azon
+inner join SZEREP sr on a.szerep = sr.sz_id
+where sr.jogdíjas = 0;
+
+-- Használat:
+select * from jogdijmentes_dalok;
+
+--DROP VIEW jogdijmentes_dalok;
+
+
+
+
+
+--13. Kik az együttesek jelenlegi tagjai?
+select sz.név as tag, s.név as együttes
+from TAGJA t
+inner join SZEM_EGY sz on t.személy = sz.kód
+inner join SZEM_EGY s on t.együttes = s.kód
+where t.dátumig is null;
+
+
+
+
+
+
+
+
+
+
+
+
+select * from dal
+select * from műfaj
+select * from szem_egy
+select * from ELŐADJA
+select * from TAGJA
+select * from szerep
+
+select * from alkotja
+select * from platform
+select * from megjelent
+
+
+
+
+
+
+
+
+--1. Ellenőrzés: Egy adott előadó együttes-e?
+CREATE FUNCTION IsEgyüttes
+(
+    @szem_egy INT
+)
+RETURNS BIT
+AS
+BEGIN
+    DECLARE @vissza BIT = 0;
+    IF (SELECT jelzés FROM SZEM_EGY WHERE kód = @szem_egy) = 'E'
+        SET @vissza = 1;
+    RETURN @vissza;
+END;
+
+--SELECT dbo.isEgyuttes(3);
+
+
+
+
+
+
+
+
+--2. Egy dal létezik-e a rendszerben?
+CREATE FUNCTION DalLetezik
+(
+    @dal INT
+)
+RETURNS BIT
+AS
+BEGIN
+    RETURN CASE 
+        WHEN EXISTS (SELECT 1 FROM DAL WHERE azon = @dal) THEN 1
+        ELSE 0
+    END;
+END;
+
+--select dbo.DalLetezik(1)
+
+
+
+
+
+
+
+--3. Egy dal jogdíjas alkotóval rendelkezik-e?
+CREATE FUNCTION VanJogdijasAlkoto
+(
+    @dal INT
+)
+RETURNS BIT
+AS
+BEGIN
+    RETURN CASE 
+        WHEN EXISTS (
+            SELECT 1 
+            FROM ALKOTJA a
+            INNER JOIN SZEREP sz ON a.szerep = sz.sz_id
+            WHERE a.dal = @dal AND sz.jogdíjas = 1
+        ) THEN 1
+        ELSE 0
+    END;
+END;
+
+--select dbo.VanJogdijasAlkoto(1)
+
+
+
+
+
+
+
+--4. Melyik műfaj ID-ja tartozik egy adott dalhoz?
+CREATE FUNCTION DalMufaja
+(
+    @dal INT
+)
+RETURNS INT
+AS
+BEGIN
+    RETURN (SELECT műfaj FROM DAL WHERE azon = @dal);
+END;
+
+--select dbo.DalMufaja(2)
+
+
+
+
+
+
+
+
+--5. Egy adott előadó nevét visszaadni az ID alapján
+CREATE FUNCTION SzemEgyNev
+(
+    @szem_egy INT
+)
+RETURNS NVARCHAR(255)
+AS
+BEGIN
+    RETURN (SELECT név FROM SZEM_EGY WHERE kód = @szem_egy);
+END;
+
+
+
+
+
+
+
+--Összetettebb Függvények
+--6. Egy adott előadó hány dalt adott elő?
+CREATE FUNCTION EloadoDalSzam
+(
+    @szem_egy INT
+)
+RETURNS INT
+AS
+BEGIN
+    RETURN (SELECT COUNT(*)
+            FROM ELŐADJA
+            WHERE szem_egy = @szem_egy);
+END;
+
+
+
+
+
+
+
+
+
+--7. Melyik platformon jelent meg egy adott dal legkorábban?
+CREATE FUNCTION ElsoMegjelenesPlatform
+(
+    @dal INT
+)
+RETURNS NVARCHAR(255)
+AS
+BEGIN
+    RETURN (
+        SELECT TOP 1 p.név
+        FROM MEGJELENT m
+        INNER JOIN PLATFORM p ON m.platform = p.platform
+        WHERE m.dal = @dal
+        ORDER BY m.megjelenés ASC
+    );
+END;
+
+
+
+
+
+
+
+
+--8. Egy dal összes előadójának neve, összefűzve vesszővel
+CREATE FUNCTION DalEloadok
+(
+    @dal INT
+)
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+    DECLARE @eloadok NVARCHAR(MAX);
+    SELECT @eloadok = STRING_AGG(sz.név, ', ')
+    FROM ELŐADJA e
+    INNER JOIN SZEM_EGY sz ON e.szem_egy = sz.kód
+    WHERE e.dal = @dal;
+    RETURN @eloadok;
+END;
+
+
+
+
+
+
+
+
+--9. Egy dal műfajának neve vagy "Ismeretlen", ha nincs műfaj
+CREATE FUNCTION DalMufajNev
+(
+    @dal INT
+)
+RETURNS NVARCHAR(255)
+AS
+BEGIN
+    RETURN ISNULL(
+        (SELECT elnevezés
+         FROM MŰFAJ m
+         INNER JOIN DAL d ON m.id = d.műfaj
+         WHERE d.azon = @dal), 
+        'Ismeretlen'
+    );
+END;
+
+
+
+
+
+
+
+
+
+--10. Egy dal eredeti előadójának neve vagy "Nincs eredeti"
+CREATE FUNCTION DalEredetiEloado
+(
+    @dal INT
+)
+RETURNS NVARCHAR(255)
+AS
+BEGIN
+    RETURN ISNULL(
+        (SELECT név
+         FROM SZEM_EGY
+         WHERE kód = (SELECT eredeti FROM DAL WHERE azon = @dal)),
+        'Nincs eredeti'
+    );
+END;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DELETE FROM TAGJA;
+DELETE FROM ALKOTJA;
+DELETE FROM ELŐADJA;
+DELETE FROM MEGJELENT;
+DELETE FROM DAL;
+DELETE FROM PLATFORM;
+DELETE FROM SZEREP;
+DELETE FROM SZEM_EGY;
+DELETE FROM MŰFAJ;
+
