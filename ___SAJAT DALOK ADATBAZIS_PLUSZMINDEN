@@ -378,18 +378,13 @@ CREATE FUNCTION DalLetezik
 RETURNS BIT
 AS
 BEGIN
-    RETURN CASE 
-        WHEN EXISTS (SELECT 1 FROM DAL WHERE azon = @dal) THEN 1
-        ELSE 0
-    END;
+    DECLARE @vissza BIT = 0;
+    IF EXISTS (SELECT 1 FROM DAL WHERE azon = @dal)
+        SET @vissza = 1;
+    RETURN @vissza;
 END;
 
---select dbo.DalLetezik(1)
-
-
-
-
-
+--SELECT dbo.DalLetezik(1);
 
 
 --3. Egy dal jogdíjas alkotóval rendelkezik-e?
@@ -400,23 +395,18 @@ CREATE FUNCTION VanJogdijasAlkoto
 RETURNS BIT
 AS
 BEGIN
-    RETURN CASE 
-        WHEN EXISTS (
-            SELECT 1 
-            FROM ALKOTJA a
-            INNER JOIN SZEREP sz ON a.szerep = sz.sz_id
-            WHERE a.dal = @dal AND sz.jogdíjas = 1
-        ) THEN 1
-        ELSE 0
-    END;
+    DECLARE @vissza BIT = 0;
+    IF EXISTS (
+        SELECT 1 
+        FROM ALKOTJA a
+        INNER JOIN SZEREP sz ON a.szerep = sz.sz_id
+        WHERE a.dal = @dal AND sz.jogdíjas = 1
+    )
+        SET @vissza = 1;
+    RETURN @vissza;
 END;
 
---select dbo.VanJogdijasAlkoto(1)
-
-
-
-
-
+--SELECT dbo.VanJogdijasAlkoto(1);
 
 
 --4. Melyik műfaj ID-ja tartozik egy adott dalhoz?
@@ -427,16 +417,12 @@ CREATE FUNCTION DalMufaja
 RETURNS INT
 AS
 BEGIN
-    RETURN (SELECT műfaj FROM DAL WHERE azon = @dal);
+    DECLARE @vissza INT;
+    SELECT @vissza = műfaj FROM DAL WHERE azon = @dal;
+    RETURN @vissza;
 END;
 
---select dbo.DalMufaja(2)
-
-
-
-
-
-
+--SELECT dbo.DalMufaja(2);
 
 
 --5. Egy adott előadó nevét visszaadni az ID alapján
@@ -447,16 +433,14 @@ CREATE FUNCTION SzemEgyNev
 RETURNS NVARCHAR(255)
 AS
 BEGIN
-    RETURN (SELECT név FROM SZEM_EGY WHERE kód = @szem_egy);
+    DECLARE @vissza NVARCHAR(255);
+    SELECT @vissza = név FROM SZEM_EGY WHERE kód = @szem_egy;
+    RETURN @vissza;
 END;
 
+--SELECT dbo.SzemEgyNev(1);
 
 
-
-
-
-
---Összetettebb Függvények
 --6. Egy adott előadó hány dalt adott elő?
 CREATE FUNCTION EloadoDalSzam
 (
@@ -465,17 +449,14 @@ CREATE FUNCTION EloadoDalSzam
 RETURNS INT
 AS
 BEGIN
-    RETURN (SELECT COUNT(*)
-            FROM ELŐADJA
-            WHERE szem_egy = @szem_egy);
+    DECLARE @vissza INT;
+    SELECT @vissza = COUNT(*)
+    FROM ELŐADJA
+    WHERE szem_egy = @szem_egy;
+    RETURN @vissza;
 END;
 
-
-
-
-
-
-
+--SELECT dbo.EloadoDalSzam(1);
 
 
 --7. Melyik platformon jelent meg egy adott dal legkorábban?
@@ -486,20 +467,16 @@ CREATE FUNCTION ElsoMegjelenesPlatform
 RETURNS NVARCHAR(255)
 AS
 BEGIN
-    RETURN (
-        SELECT TOP 1 p.név
-        FROM MEGJELENT m
-        INNER JOIN PLATFORM p ON m.platform = p.platform
-        WHERE m.dal = @dal
-        ORDER BY m.megjelenés ASC
-    );
+    DECLARE @vissza NVARCHAR(255);
+    SELECT TOP 1 @vissza = p.név
+    FROM MEGJELENT m
+    INNER JOIN PLATFORM p ON m.platform = p.platform
+    WHERE m.dal = @dal
+    ORDER BY m.megjelenés ASC;
+    RETURN @vissza;
 END;
 
-
-
-
-
-
+--SELECT dbo.ElsoMegjelenesPlatform(1);
 
 
 --8. Egy dal összes előadójának neve, összefűzve vesszővel
@@ -510,19 +487,15 @@ CREATE FUNCTION DalEloadok
 RETURNS NVARCHAR(MAX)
 AS
 BEGIN
-    DECLARE @eloadok NVARCHAR(MAX);
-    SELECT @eloadok = STRING_AGG(sz.név, ', ')
+    DECLARE @vissza NVARCHAR(MAX);
+    SELECT @vissza = STRING_AGG(sz.név, ', ')
     FROM ELŐADJA e
     INNER JOIN SZEM_EGY sz ON e.szem_egy = sz.kód
     WHERE e.dal = @dal;
-    RETURN @eloadok;
+    RETURN @vissza;
 END;
 
-
-
-
-
-
+--SELECT dbo.DalEloadok(1);
 
 
 --9. Egy dal műfajának neve vagy "Ismeretlen", ha nincs műfaj
@@ -533,21 +506,18 @@ CREATE FUNCTION DalMufajNev
 RETURNS NVARCHAR(255)
 AS
 BEGIN
-    RETURN ISNULL(
+    DECLARE @vissza NVARCHAR(255);
+    SELECT @vissza = ISNULL(
         (SELECT elnevezés
          FROM MŰFAJ m
          INNER JOIN DAL d ON m.id = d.műfaj
          WHERE d.azon = @dal), 
         'Ismeretlen'
     );
+    RETURN @vissza;
 END;
 
-
-
-
-
-
-
+--SELECT dbo.DalMufajNev(1);
 
 
 --10. Egy dal eredeti előadójának neve vagy "Nincs eredeti"
@@ -558,15 +528,17 @@ CREATE FUNCTION DalEredetiEloado
 RETURNS NVARCHAR(255)
 AS
 BEGIN
-    RETURN ISNULL(
+    DECLARE @vissza NVARCHAR(255);
+    SELECT @vissza = ISNULL(
         (SELECT név
          FROM SZEM_EGY
          WHERE kód = (SELECT eredeti FROM DAL WHERE azon = @dal)),
         'Nincs eredeti'
     );
+    RETURN @vissza;
 END;
 
-
+--SELECT dbo.DalEredetiEloado(1);
 
 
 
