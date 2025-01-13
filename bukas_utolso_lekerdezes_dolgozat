@@ -1,0 +1,71 @@
+Adott szövegírónak mi volt az első dala?
+create function ElsoSzovegiro
+(
+@alk_id int
+)
+returns int
+as
+begin
+declare @vissza int = null;
+if exists (select top 1
+from ALKOTJA a
+inner join DAL d on d.azon = a.dal
+inner join MEGJELENT m on d.azon = m.megjelenés
+where a.alk_id = @alk_id
+order by m.megjelenés ASC)
+return @vissza;
+end
+
+2 kérdés
+Kész
+3,00 pont szerezhető
+Nincs megjelölveA kérdés megjelölése
+Kérdés szövege
+Adott zeneszerző mely dalokat szerezte társszerzőként?
+create function tarsSzerzo
+(
+@zenSzerzo int
+)
+returns table
+as
+begin
+declare @vissza table;
+if exists (
+select a.személy ,count(a.személy)
+from ALKOTJA a
+inner join DAL d on d.azon = a.dal
+inner join SZEREP sz on a.szerep= sz.sz_id
+where sz.sz_id = 'Zeneszerzo'
+--where sz.megnevezés = 'Zeneszerzo'
+group by a.személy
+having count(a.személy) > 1
+)
+end
+
+3 kérdés
+Kész
+3,00 pont szerezhető
+Nincs megjelölveA kérdés megjelölése
+Kérdés szövege
+Melyik évben szerzett közös dalt X és Y?
+create view kozosDal as
+-- select m.megjelenés, d.cím
+from ALKOTJA a
+inner join DAL d on a.dal = d.azon
+inner join MEGJELENT m on d.azon = m.dal
+group by a.dal
+
+4 kérdés
+Kész
+3,00 pont szerezhető
+Nincs megjelölveA kérdés megjelölése
+Kérdés szövege
+Ki hány éve nem írt dalt?
+-- Ki hány éve nem írt dalt?
+--táblák: dal, alkotja
+create view nemIrtDalt as
+select a.személy, max(datediff(year, d.keletkezés, getdate()))
+from DAL d
+inner join ALKOTJA a on d.azon = a.dal
+group by a.személy
+order by d.keletkezés ASC
