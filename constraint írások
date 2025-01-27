@@ -107,3 +107,21 @@ alter table lakik add constraint lakik check (dbo.sokan(szszám, mettől) = 0)
 insert into lakik values (101, '20241014', 101)
 insert into lakik values (101, '20241014', 102)
 insert into lakik values (101, '20241014', 103)
+
+
+
+
+
+
+
+
+Megszorítások(adatbázis szabályok)
+	a, evidens(k,kk,null)
+	b, constraint(korlátozás, néha függvénnyel működik)
+	c, trigger: további adatbázis műveletekre van szükség
+
+tr. neve
+ON Tábla
+	esemény után (helyett), ekkor futhat le: insert, update, delete
+	FOR = AFTER      if nem kellett volna, rollback
+	if szabadacsók meglehet csinálni, 
