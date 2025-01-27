@@ -125,3 +125,61 @@ ON Tábla
 	esemény után (helyett), ekkor futhat le: insert, update, delete
 	FOR = AFTER      if nem kellett volna, rollback
 	if szabadacsók meglehet csinálni, 
+
+
+
+példa:
+
+
+
+use csomagkuldoB
+
+select * from cikk
+select * from rendelés
+select * from rend_tétel
+select * from csomag
+select * from vevő
+
+
+
+GO
+create trigger csomagbaRakás
+on rend_tétel
+after update
+as
+begin
+	declare @újcsomag char(12)
+	select @újcsomag = csomag from inserted
+	IF not update(csomag) or (select csomag from deleted) is not null
+		or (select csomag from inserted) is null
+	begin
+		print 'már becsomagolt'
+		rollback
+	end
+
+
+	IF not (select feladva from csomag where csomag = @újcsomag) is not null
+	begin
+		print 'ez a csomag már fel van adva'
+		rollback
+	end
+
+	IF (select akt_készlet from cikk c inner join inserted i on c.cikkszám = i.cikkszám) <
+		(select menny from inserted)
+	begin
+		print 'kevés van belőle'
+		rollback
+	end
+
+	IF (select COUNT(distinct vkód) 
+		from rendelés r 
+		inner join rend_tétel rt on rt.rend_szám = r.rend_szám
+		where csomag = @újcsomag) > 1
+	begin
+		print 'nem ugyanaz a vevő'
+		rollback
+	end
+	ELSE 
+	update cikk set akt_készlet = akt_készlet - (select menny from inserted)
+	where cikkszám = (select cikkszám from inserted)
+end
