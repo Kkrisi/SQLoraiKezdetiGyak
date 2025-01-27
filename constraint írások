@@ -183,3 +183,5 @@ begin
 	update cikk set akt_készlet = akt_készlet - (select menny from inserted)
 	where cikkszám = (select cikkszám from inserted)
 end
+
+a kilégzés sokkal hosszabb legyen a szádon! Kupcsik tanács!
