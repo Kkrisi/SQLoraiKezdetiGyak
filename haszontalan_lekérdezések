@@ -24,6 +24,32 @@ Minden kiküldött PDF egy adott diákhoz kapcsolódik.
 
 
 
+-------------------------------------------------------------------------------------------------------------------------------------------
+Igen, pontosan, az ER-diagram és az adatbázis séma jelölése között van egy fontos különbség, amit most pontosan tisztázok:
+
+ER-diagramokban:
+Az ER-diagram (Entitás–Kapcsolat diagram) célja, hogy szemléltetni tudja a táblák közötti logikai kapcsolatokat. Az "1:N" kapcsolatot általában a "több" felé mutató nyilakkal ábrázolják.
+
+
+Adatbázis séma:
+Az adatbázis séma (a táblák és mezők definíciója) azt jelenti, hogy hogyan valósul meg a kapcsolat az adatbázisban. Itt az idegen kulcsok mutatnak egy másik táblára.
+
+Tehát az adatbázisban a táblák kapcsolata a külső kulcsok által van meghatározva. Az idegen kulcs a "több" oldalról mutat a "kevesebb" oldalra.
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
