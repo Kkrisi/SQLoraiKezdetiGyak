@@ -1,3 +1,5 @@
+Igen, az ER-diagramban a nyíl mindig a "több" irányába mutat, vagyis a "1" entitásból a "N" entitásba mutat a kapcsolat.
+
 8. Mely diákok kaptak emaileket, de egyik PDF-hez sem társították őket?
 
 SELECT s.student_name
@@ -18,3 +20,176 @@ AND e.email_sent_at >= NOW() - INTERVAL 30 DAY
 GROUP BY s.student_name
 HAVING failed_attempts > 1;
 Miért hasznos? → Azonosítja azokat a diákokat, akiknél folyamatosan problémák adódnak az emailküldéssel (pl. rossz emailcím, spam-szűrők).
+
+
+
+6. Mennyi az összes kiküldött dokumentum száma iskolánként az elmúlt évben?
+
+SELECT i.nev AS iskola_nev, COUNT(k.kikuldott_azon) AS total_sent
+FROM iskola i
+JOIN dolgozos d ON i.isk_azon = d.iskola_azon
+JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
+WHERE k.kuldes_datuma >= NOW() - INTERVAL 1 YEAR
+GROUP BY i.isk_azon
+ORDER BY total_sent DESC;
+Miért hasznos? → Megmutatja, mely iskolák dolgozói kapják a legtöbb pénzügyi dokumentumot.
+
+
+1. Kik azok a diákok, akik még nem kaptak PDF-et ebben a hónapban?
+
+SELECT d.*
+FROM dolgozos d
+LEFT JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon 
+    AND DATE_FORMAT(k.kuldes_datuma, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')
+WHERE k.kikuldott_azon IS NULL;
+Miért hasznos?
+Ez segít megtalálni azokat a diákokat, akiknek még nem küldtél PDF-et ebben a hónapban, így elkerülheted a duplikált küldést.
+
+
+
+2. Melyik diák kapott legutoljára pénzügyi dokumentumot?
+
+SELECT d.*, k.kuldes_datuma
+FROM dolgozos d
+JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
+ORDER BY k.kuldes_datuma DESC
+LIMIT 1;
+Miért hasznos?
+Megmutatja, ki kapott legutoljára emailt, így láthatod, mikor történt az utolsó kiküldés.
+
+
+
+
+3. Volt-e olyan hónap, amikor valaki kimaradt a kiküldésből?
+
+SELECT YEAR(k.kuldes_datuma) AS ev, MONTH(k.kuldes_datuma) AS honap, 
+       COUNT(DISTINCT d.d_azon) AS kapott_diakok,
+       (SELECT COUNT(*) FROM dolgozos) AS osszes_diak
+FROM kikuldotts k
+JOIN dolgozos d ON d.d_azon = k.dolgozo_azon
+GROUP BY ev, honap
+HAVING kapott_diakok < osszes_diak;
+Miért hasznos?
+Megmutatja, hogy volt-e olyan hónap, amikor nem minden diáknak küldted ki a PDF-et, így észreveheted, ha valaki kimaradt.
+
+
+
+
+4. Melyik diákok kaptak PDF-et az elmúlt 6 hónapban minden hónapban?
+
+SELECT d.d_azon, d.nev, COUNT(DISTINCT DATE_FORMAT(k.kuldes_datuma, '%Y-%m')) AS honapok_szama
+FROM dolgozos d
+JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
+WHERE k.kuldes_datuma >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+GROUP BY d.d_azon, d.nev
+HAVING honapok_szama = 6;
+Miért hasznos?
+Ellenőrizheted, hogy kik minden hónapban pontosan megkapták az emailt az elmúlt fél évben.
+
+
+5. Hány PDF-et küldtél ki az elmúlt egy évben, havi bontásban?
+
+SELECT YEAR(k.kuldes_datuma) AS ev, MONTH(k.kuldes_datuma) AS honap, COUNT(*) AS kikuldott_pdf_db
+FROM kikuldotts k
+WHERE k.kuldes_datuma >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
+GROUP BY ev, honap
+ORDER BY ev DESC, honap DESC;
+Miért hasznos?
+Havi statisztikát kapsz arról, hány PDF-et küldtél ki havonta, így követheted a trendeket.
+
+
+
+6. Kik azok a diákok, akiknek még SOHA nem küldtél PDF-et?
+
+SELECT d.*
+FROM dolgozos d
+LEFT JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
+WHERE k.dolgozo_azon IS NULL;
+Miért hasznos?
+Megtalálja azokat a diákokat, akik soha nem kaptak PDF-et, így ellenőrizheted, hogy nincs-e elfelejtett adat.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CREATE DATABASE IF NOT EXISTS my_database;
+USE my_database;
+
+-- Felhasználók tábla
+CREATE TABLE users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    email_verified_at TIMESTAMP NULL DEFAULT NULL,
+    password VARCHAR(255) NOT NULL,
+    jogosultsag_azon TINYINT UNSIGNED DEFAULT 1 CHECK (jogosultsag_azon BETWEEN 0 AND 10),
+    remember_token VARCHAR(100) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Gyakorlati helyek tábla
+CREATE TABLE gyakorlatihely (
+    gyak_azon BIGINT AUTO_INCREMENT PRIMARY KEY,
+    ceg_nev VARCHAR(255) NOT NULL,
+    web_oldal VARCHAR(255) NULL,
+    kapcsolat_tarto VARCHAR(255) NOT NULL,
+    telefonszam VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Iskolák tábla
+CREATE TABLE iskola (
+    isk_azon BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nev VARCHAR(255) NOT NULL,
+    web_oldal VARCHAR(255) NULL,
+    kapcsolat_tarto VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Dolgozók tábla
+CREATE TABLE dolgozos (
+    d_azon BIGINT PRIMARY KEY,
+    nev VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    szul_nev VARCHAR(255) NULL,
+    születesi_hely VARCHAR(255) NULL,
+    születesi_ido DATE NULL,
+    anyaja_neve VARCHAR(255) NULL,
+    taj_szam VARCHAR(15) UNIQUE NULL,
+    ado_szam VARCHAR(15) UNIQUE NULL,
+    gondviselo_nev VARCHAR(255) NULL,
+    telefonszam VARCHAR(20) NULL,
+    iskola_azon BIGINT NULL,
+    gyakhely_azon BIGINT NULL,
+    megjegyzes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (iskola_azon) REFERENCES iskola(isk_azon) ON DELETE SET NULL,
+    FOREIGN KEY (gyakhely_azon) REFERENCES gyakorlatihely(gyak_azon) ON DELETE SET NULL
+);
+
+-- Kiküldött PDF-ek tábla
+CREATE TABLE kikuldotts (
+    kikuldott_azon BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dolgozo_azon BIGINT NOT NULL,
+    pdf_fajl_neve VARCHAR(255) NOT NULL,
+    kuldes_datuma DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (dolgozo_azon) REFERENCES dolgozos(d_azon) ON DELETE CASCADE
+);
