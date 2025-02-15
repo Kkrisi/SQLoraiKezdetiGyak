@@ -1,5 +1,32 @@
 Igen, az ER-diagramban a nyíl mindig a "több" irányába mutat, vagyis a "1" entitásból a "N" entitásba mutat a kapcsolat.
 
+
+Az adatbázisod kapcsolatai így néznek ki:
+
+users → (jogosultság azonosító)
+dolgozos → iskola (iskola_azon)
+dolgozos → gyakorlatihely (gyakhely_azon)
+kikuldotts → dolgozos (dolgozo_azon)
+Tehát a kapcsolatok így néznek ki:
+
+
+users (jogosultsag_azon)  
+dolgozos -> iskola (iskola_azon)  
+dolgozos -> gyakorlatihely (gyakhely_azon)  
+kikuldotts -> dolgozos (dolgozo_azon)  
+Ez azt jelenti, hogy:
+
+Egy diák egy iskolához tartozik.
+Egy diák egy gyakorlati helyhez tartozhat.
+Minden kiküldött PDF egy adott diákhoz kapcsolódik.
+
+
+
+
+
+
+
+
 8. Mely diákok kaptak emaileket, de egyik PDF-hez sem társították őket?
 
 SELECT s.student_name
