@@ -1,0 +1,20 @@
+8. Mely diákok kaptak emaileket, de egyik PDF-hez sem társították őket?
+
+SELECT s.student_name
+FROM students s
+LEFT JOIN student_files sf ON s.student_id = sf.student_id
+JOIN emails e ON s.student_id = e.student_id
+WHERE sf.file_id IS NULL;
+Miért hasznos? → Azonosítja azokat a diákokat, akik kaptak emaileket, de nem kaptak pénzügyi dokumentumokat (pl. hiba lehet a rendszerben).
+
+
+1. Kik azok a diákok, akiknek több mint egy sikertelen emailküldésük volt az elmúlt 30 napban?
+
+SELECT s.student_name, COUNT(e.email_id) AS failed_attempts
+FROM students s
+JOIN emails e ON s.student_id = e.student_id
+WHERE e.status = 'failed' 
+AND e.email_sent_at >= NOW() - INTERVAL 30 DAY
+GROUP BY s.student_name
+HAVING failed_attempts > 1;
+Miért hasznos? → Azonosítja azokat a diákokat, akiknél folyamatosan problémák adódnak az emailküldéssel (pl. rossz emailcím, spam-szűrők).
