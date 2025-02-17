@@ -60,7 +60,7 @@ WHERE k.kuldes_datuma IS NULL OR MONTH(k.kuldes_datuma) <> MONTH(GETDATE());
 
 
 
-2. A diákok vagy adott diák mikor kapott legutoljára pénzügyi dokumentumot?
+2. A diákok vagy adott diák mikor kapott legutoljára pénzügyi dokumentumot? nézetbe írjam
 SELECT TOP 1 d.nev, d.email, k.pdf_fajl_neve, k.kuldes_datuma
 FROM dolgozos d
 JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
