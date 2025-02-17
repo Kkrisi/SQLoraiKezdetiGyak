@@ -49,10 +49,10 @@ Tehát az adatbázisban a táblák kapcsolata a külső kulcsok által van megha
 
 
 
+!!!!! megszorításokhoz specifikácioba beleirni hogy a kikuldott táblán a penzugy azon -ba ugyanannak  kell benne lennie mint a pdf_fajl_nevében a kodban !!!!!!!
 
 
-
-1. Kik azok a diákok, akik még nem kaptak PDF-et ebben a hónapban?
+1. Kik azok a diákok, akik még nem kaptak PDF-et ebben a hónapban? (kijavítani: mindig a következő honapba kuldjuk ki az elozo havit)
 SELECT d.nev, d.email
 FROM dolgozos d
 LEFT JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
@@ -60,7 +60,7 @@ WHERE k.kuldes_datuma IS NULL OR MONTH(k.kuldes_datuma) <> MONTH(GETDATE());
 
 
 
-2. Melyik diák kapott legutoljára pénzügyi dokumentumot?
+2. A diákok vagy adott diák mikor kapott legutoljára pénzügyi dokumentumot?
 SELECT TOP 1 d.nev, d.email, k.pdf_fajl_neve, k.kuldes_datuma
 FROM dolgozos d
 JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
@@ -82,7 +82,7 @@ GROUP BY YEAR(k.kuldes_datuma), MONTH(k.kuldes_datuma)
 ORDER BY ev DESC, honap DESC;
 
 
-5. Kik azok a diákok, akiknek még SOHA nem küldtél PDF-et?
+5. Kik azok a diákok, akiknek még SOHA nem küldtél PDF-et?, (javitani: amiota fel lettek véve a sulihoz)
 SELECT d.nev, d.email
 FROM dolgozos d
 LEFT JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
