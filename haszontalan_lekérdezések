@@ -52,114 +52,41 @@ Tehát az adatbázisban a táblák kapcsolata a külső kulcsok által van megha
 
 
 
-
-8. Mely diákok kaptak emaileket, de egyik PDF-hez sem társították őket?
-
-SELECT s.student_name
-FROM students s
-LEFT JOIN student_files sf ON s.student_id = sf.student_id
-JOIN emails e ON s.student_id = e.student_id
-WHERE sf.file_id IS NULL;
-Miért hasznos? → Azonosítja azokat a diákokat, akik kaptak emaileket, de nem kaptak pénzügyi dokumentumokat (pl. hiba lehet a rendszerben).
-
-
-1. Kik azok a diákok, akiknek több mint egy sikertelen emailküldésük volt az elmúlt 30 napban?
-
-SELECT s.student_name, COUNT(e.email_id) AS failed_attempts
-FROM students s
-JOIN emails e ON s.student_id = e.student_id
-WHERE e.status = 'failed' 
-AND e.email_sent_at >= NOW() - INTERVAL 30 DAY
-GROUP BY s.student_name
-HAVING failed_attempts > 1;
-Miért hasznos? → Azonosítja azokat a diákokat, akiknél folyamatosan problémák adódnak az emailküldéssel (pl. rossz emailcím, spam-szűrők).
-
-
-
-6. Mennyi az összes kiküldött dokumentum száma iskolánként az elmúlt évben?
-
-SELECT i.nev AS iskola_nev, COUNT(k.kikuldott_azon) AS total_sent
-FROM iskola i
-JOIN dolgozos d ON i.isk_azon = d.iskola_azon
-JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
-WHERE k.kuldes_datuma >= NOW() - INTERVAL 1 YEAR
-GROUP BY i.isk_azon
-ORDER BY total_sent DESC;
-Miért hasznos? → Megmutatja, mely iskolák dolgozói kapják a legtöbb pénzügyi dokumentumot.
-
-
 1. Kik azok a diákok, akik még nem kaptak PDF-et ebben a hónapban?
-
-SELECT d.*
+SELECT d.nev, d.email
 FROM dolgozos d
-LEFT JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon 
-    AND DATE_FORMAT(k.kuldes_datuma, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')
-WHERE k.kikuldott_azon IS NULL;
-Miért hasznos?
-Ez segít megtalálni azokat a diákokat, akiknek még nem küldtél PDF-et ebben a hónapban, így elkerülheted a duplikált küldést.
+LEFT JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
+WHERE k.kuldes_datuma IS NULL OR MONTH(k.kuldes_datuma) <> MONTH(GETDATE());
 
 
 
 2. Melyik diák kapott legutoljára pénzügyi dokumentumot?
-
-SELECT d.*, k.kuldes_datuma
+SELECT TOP 1 d.nev, d.email, k.pdf_fajl_neve, k.kuldes_datuma
 FROM dolgozos d
 JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
-ORDER BY k.kuldes_datuma DESC
-LIMIT 1;
-Miért hasznos?
-Megmutatja, ki kapott legutoljára emailt, így láthatod, mikor történt az utolsó kiküldés.
-
-
+ORDER BY k.kuldes_datuma DESC;
 
 
 3. Volt-e olyan hónap, amikor valaki kimaradt a kiküldésből?
-
-SELECT YEAR(k.kuldes_datuma) AS ev, MONTH(k.kuldes_datuma) AS honap, 
-       COUNT(DISTINCT d.d_azon) AS kapott_diakok,
-       (SELECT COUNT(*) FROM dolgozos) AS osszes_diak
+SELECT DISTINCT MONTH(k.kuldes_datuma)
 FROM kikuldotts k
-JOIN dolgozos d ON d.d_azon = k.dolgozo_azon
-GROUP BY ev, honap
-HAVING kapott_diakok < osszes_diak;
-Miért hasznos?
-Megmutatja, hogy volt-e olyan hónap, amikor nem minden diáknak küldted ki a PDF-et, így észreveheted, ha valaki kimaradt.
+RIGHT JOIN dolgozos d ON d.d_azon = k.dolgozo_azon
+WHERE k.kuldes_datuma IS NULL;
 
 
-
-
-4. Melyik diákok kaptak PDF-et az elmúlt 6 hónapban minden hónapban?
-
-SELECT d.d_azon, d.nev, COUNT(DISTINCT DATE_FORMAT(k.kuldes_datuma, '%Y-%m')) AS honapok_szama
-FROM dolgozos d
-JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
-WHERE k.kuldes_datuma >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
-GROUP BY d.d_azon, d.nev
-HAVING honapok_szama = 6;
-Miért hasznos?
-Ellenőrizheted, hogy kik minden hónapban pontosan megkapták az emailt az elmúlt fél évben.
-
-
-5. Hány PDF-et küldtél ki az elmúlt egy évben, havi bontásban?
-
-SELECT YEAR(k.kuldes_datuma) AS ev, MONTH(k.kuldes_datuma) AS honap, COUNT(*) AS kikuldott_pdf_db
+4. Hány PDF-et küldtél ki az elmúlt egy évben, havi bontásban?
+SELECT YEAR(k.kuldes_datuma) AS ev, MONTH(k.kuldes_datuma) AS honap, COUNT(k.kikuldott_azon) AS pdf_dbszam
 FROM kikuldotts k
-WHERE k.kuldes_datuma >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
-GROUP BY ev, honap
+WHERE k.kuldes_datuma >= GETDATE() - 365
+GROUP BY YEAR(k.kuldes_datuma), MONTH(k.kuldes_datuma)
 ORDER BY ev DESC, honap DESC;
-Miért hasznos?
-Havi statisztikát kapsz arról, hány PDF-et küldtél ki havonta, így követheted a trendeket.
 
 
-
-6. Kik azok a diákok, akiknek még SOHA nem küldtél PDF-et?
-
-SELECT d.*
+5. Kik azok a diákok, akiknek még SOHA nem küldtél PDF-et?
+SELECT d.nev, d.email
 FROM dolgozos d
 LEFT JOIN kikuldotts k ON d.d_azon = k.dolgozo_azon
 WHERE k.dolgozo_azon IS NULL;
-Miért hasznos?
-Megtalálja azokat a diákokat, akik soha nem kaptak PDF-et, így ellenőrizheted, hogy nincs-e elfelejtett adat.
 
 
 
@@ -175,74 +102,126 @@ Megtalálja azokat a diákokat, akik soha nem kaptak PDF-et, így ellenőrizhete
 
 
 
+CREATE DATABASE IF NOT EXISTS szakdoga;
+USE szakdoga;
+GO
 
+-- 2. Táblák létrehozása a megfelelő sorrendben
 
-
-
-CREATE DATABASE IF NOT EXISTS my_database;
-USE my_database;
-
--- Felhasználók tábla
-CREATE TABLE users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    email_verified_at TIMESTAMP NULL DEFAULT NULL,
-    password VARCHAR(255) NOT NULL,
-    jogosultsag_azon TINYINT UNSIGNED DEFAULT 1 CHECK (jogosultsag_azon BETWEEN 0 AND 10),
-    remember_token VARCHAR(100) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
--- Gyakorlati helyek tábla
-CREATE TABLE gyakorlatihely (
-    gyak_azon BIGINT AUTO_INCREMENT PRIMARY KEY,
-    ceg_nev VARCHAR(255) NOT NULL,
-    web_oldal VARCHAR(255) NULL,
-    kapcsolat_tarto VARCHAR(255) NOT NULL,
-    telefonszam VARCHAR(20) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
--- Iskolák tábla
+-- iskola tábla létrehozása
 CREATE TABLE iskola (
-    isk_azon BIGINT AUTO_INCREMENT PRIMARY KEY,
-    nev VARCHAR(255) NOT NULL,
-    web_oldal VARCHAR(255) NULL,
-    kapcsolat_tarto VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    isk_azon bigint IDENTITY(1,1) PRIMARY KEY,
+    nev nvarchar(255) NOT NULL,
+    web_oldal nvarchar(255),
+    kapcsolat_tarto nvarchar(255) NOT NULL,
+    created_at datetime,
+    updated_at datetime
 );
+GO
 
--- Dolgozók tábla
-CREATE TABLE dolgozos (
-    d_azon BIGINT PRIMARY KEY,
-    nev VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    szul_nev VARCHAR(255) NULL,
-    születesi_hely VARCHAR(255) NULL,
-    születesi_ido DATE NULL,
-    anyaja_neve VARCHAR(255) NULL,
-    taj_szam VARCHAR(15) UNIQUE NULL,
-    ado_szam VARCHAR(15) UNIQUE NULL,
-    gondviselo_nev VARCHAR(255) NULL,
-    telefonszam VARCHAR(20) NULL,
-    iskola_azon BIGINT NULL,
-    gyakhely_azon BIGINT NULL,
-    megjegyzes TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (iskola_azon) REFERENCES iskola(isk_azon) ON DELETE SET NULL,
-    FOREIGN KEY (gyakhely_azon) REFERENCES gyakorlatihely(gyak_azon) ON DELETE SET NULL
+-- gyakorlatihely tábla létrehozása
+CREATE TABLE gyakorlatihely (
+    gyak_azon bigint IDENTITY(1,1) PRIMARY KEY,
+    ceg_nev nvarchar(255) NOT NULL,
+    web_oldal nvarchar(255),
+    kapcsolat_tarto nvarchar(255) NOT NULL,
+    telefonszam nvarchar(255) NOT NULL,
+    created_at datetime,
+    updated_at datetime
 );
+GO
+
+-- dolgozos tábla létrehozása
+ALTER TABLE dolgozos (
+    d_azon bigint IDENTITY(1,1) PRIMARY KEY,
+    nev nvarchar(255) NOT NULL,
+    email nvarchar(255) NOT NULL,
+    szul_nev nvarchar(255),
+    születesi_hely nvarchar(255),
+    születesi_ido date,
+    anyaja_neve nvarchar(255),
+    taj_szam nvarchar(255),
+    ado_szam nvarchar(255),
+    gondviselo_nev nvarchar(255),
+    telefonszam nvarchar(255),
+    iskola_azon bigint,
+    gyakhely_azon bigint,
+    megjegyzes varchar(max),
+    created_at datetime,
+    updated_at datetime
+);
+GO
+
 
 -- Kiküldött PDF-ek tábla
 CREATE TABLE kikuldotts (
-    kikuldott_azon BIGINT AUTO_INCREMENT PRIMARY KEY,
-    dolgozo_azon BIGINT NOT NULL,
-    pdf_fajl_neve VARCHAR(255) NOT NULL,
+    kikuldott_azon bigint IDENTITY(1,1) PRIMARY KEY,
+    dolgozo_azon bigint NOT NULL,
+    pdf_fajl_neve varchar(255) NOT NULL,
     kuldes_datuma DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (dolgozo_azon) REFERENCES dolgozos(d_azon) ON DELETE CASCADE
+    FOREIGN KEY (dolgozo_azon) REFERENCES dolgozos(d_azon)
 );
+GO
+
+
+
+
+
+
+
+
+-- 3. Idegen kulcsok hozzáadása a dolgozos táblához
+
+-- iskola_azon idegen kulcs hozzáadása
+ALTER TABLE dolgozos
+ADD CONSTRAINT fk_dolgozos_iskola
+FOREIGN KEY (iskola_azon) REFERENCES iskola(isk_azon)
+ON DELETE SET NULL;
+GO
+
+-- gyakhely_azon idegen kulcs hozzáadása
+ALTER TABLE dolgozos
+ADD CONSTRAINT fk_dolgozos_gyakhely
+FOREIGN KEY (gyakhely_azon) REFERENCES gyakorlatihely(gyak_azon)
+ON DELETE SET NULL;
+GO
+
+-- 1. Dolgozók listája iskolánként
+CREATE VIEW DolgozokIskolankent AS
+SELECT i.nev AS iskola_nev, d.nev AS dolgozo_nev, d.email
+FROM dolgozos d
+INNER JOIN iskola i ON d.iskola_azon = i.isk_azon;
+
+
+--2. Dolgozók száma gyakorlati helyenként 
+
+CREATE VIEW DolgozokSzamaGyakorlatiHelyenkent AS
+SELECT g.ceg_nev AS gyakorlati_hely, COUNT(d.d_azon) AS dolgozok_szama
+FROM dolgozos d
+INNER JOIN gyakorlatihely g ON d.gyakhely_azon = g.gyak_azon
+GROUP BY g.ceg_nev;
+
+-- 3. Dolgozók, akiknek nincs megadva gyakorlati hely 
+CREATE VIEW DolgozokGyakorlatiHelyNelkul AS
+SELECT d.nev, d.email
+FROM dolgozos d
+WHERE d.gyakhely_azon IS NULL;
+
+
+-- 4. Gyakorlati helyek, ahol több mint 5 dolgozó van
+CREATE VIEW GyakorlatiHelyekTobbMint5Dolgozoval AS
+SELECT g.ceg_nev AS gyakorlati_hely, COUNT(d.d_azon) AS dolgozok_szama
+FROM dolgozos d
+INNER JOIN gyakorlatihely g ON d.gyakhely_azon = g.gyak_azon
+GROUP BY g.ceg_nev
+HAVING COUNT(d.d_azon) > 5;
+
+-- 5. Gyakorlati helyek, ahol nincs egyetlen dolgozó sem 
+
+-- ITT MUSZÁJ LEFT JOINT HASZNÁLNI, MIVEL OLYAN REKORDOT ADD VISSZA AHOL NINCS EGGYEZÉS 
+CREATE VIEW GyakorlatiHelyekDolgozokNelkul AS
+SELECT g.ceg_nev AS gyakorlati_hely
+FROM gyakorlatihely g
+LEFT JOIN dolgozos d ON g.gyak_azon = d.gyakhely_azon
+WHERE d.d_azon IS NULL;
+
